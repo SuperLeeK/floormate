@@ -1,0 +1,330 @@
+/* =========================================================
+   FloorMate Chat History Standalone Window Styles (380x680)
+   ========================================================= */
+
+.history-window-container {
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent !important;
+  user-select: none;
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+  overflow: hidden;
+}
+
+.history-window-card {
+  width: 380px !important;
+  height: 680px !important;
+  background: #191b22;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.75);
+  display: flex;
+  flex-direction: column;
+  color: #f5f6fa;
+  overflow: hidden;
+}
+
+/* 1. 상단 macOS 네이티브 스타일 타이틀바 */
+.history-title-bar {
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  background: #1e2029;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  -webkit-app-region: drag;
+  flex-shrink: 0;
+}
+
+.traffic-lights {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  -webkit-app-region: no-drag;
+}
+
+.traffic-light {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: inline-block;
+  transition: opacity 0.15s ease;
+}
+
+.traffic-light:hover {
+  opacity: 0.85;
+}
+
+.traffic-light.close {
+  background: #ff5f56;
+  border: 0.5px solid rgba(0, 0, 0, 0.2);
+}
+
+.traffic-light.minimize {
+  background: #ffbd2e;
+  border: 0.5px solid rgba(0, 0, 0, 0.2);
+}
+
+.traffic-light.zoom {
+  background: #27c93f;
+  border: 0.5px solid rgba(0, 0, 0, 0.2);
+  cursor: default;
+}
+
+.window-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #d1d8e0;
+  letter-spacing: -0.2px;
+}
+
+.title-spacer {
+  width: 50px;
+}
+
+/* 2. 서브 헤더 (3일 보관 안내) */
+.history-sub-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 12px 14px 10px;
+  background: #191b22;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  flex-shrink: 0;
+}
+
+.sub-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.sub-header-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.history-icon {
+  color: #a4b0be;
+}
+
+.sub-header-desc {
+  font-size: 11px;
+  color: #8b95a5;
+}
+
+.sub-header-close-btn {
+  background: transparent;
+  border: none;
+  color: #8b95a5;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.sub-header-close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ff5252;
+}
+
+/* 3. 최근 메시지 리스트 타임라인 */
+.history-messages-scroll-area {
+  flex: 1;
+  padding: 12px 14px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #191b22;
+}
+
+.history-messages-scroll-area::-webkit-scrollbar {
+  width: 6px;
+}
+
+.history-messages-scroll-area::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+.history-message-item {
+  display: flex;
+  gap: 10px;
+  background: #242731;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 10px 12px;
+  transition: background 0.15s ease;
+}
+
+.history-message-item:hover {
+  background: #292d39;
+}
+
+.message-avatar-box {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #1a1c23;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.message-content-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.message-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sender-name-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sender-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.me-badge {
+  background: #0984e3;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 6px;
+}
+
+.message-time {
+  font-size: 11px;
+  color: #8b95a5;
+  white-space: nowrap;
+}
+
+.message-text-bubble {
+  font-size: 13px;
+  font-weight: 500;
+  color: #dcdde1;
+  line-height: 1.45;
+  word-break: break-word;
+  user-select: text;
+}
+
+.history-empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #8b95a5;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.empty-icon {
+  opacity: 0.4;
+  margin-bottom: 4px;
+}
+
+.history-empty-state p {
+  font-size: 13px;
+  font-weight: 600;
+  color: #ced6e0;
+}
+
+.history-empty-state span {
+  font-size: 11px;
+  color: #747d8c;
+}
+
+/* 4. 하단 빠른 메시지 입력창 */
+.history-input-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px 12px;
+  background: #191b22;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.history-input-field {
+  flex: 1;
+  background: #242731;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 9px 14px;
+  font-size: 13px;
+  color: #ffffff;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.history-input-field:focus {
+  border-color: #0984e3;
+  background: #292d39;
+  box-shadow: 0 0 0 2px rgba(9, 132, 227, 0.25);
+}
+
+.history-input-field::placeholder {
+  color: #747d8c;
+}
+
+.history-send-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: #383d4c;
+  color: #8b95a5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.history-send-btn.active {
+  background: #0984e3;
+  color: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(9, 132, 227, 0.4);
+}
+
+.history-send-btn.active:hover {
+  background: #0070c9;
+  transform: translateY(-1px);
+}

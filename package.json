@@ -1,0 +1,12 @@
+{
+  "name": "dopamine-sidey",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "build:server": "cd server && npm run build",
+    "build:client": "cd client && npm run build",
+    "dist:client": "cd client && npm run dist"
+  }
+}

@@ -1,0 +1,611 @@
+/* =========================================================
+   FloorMate - Pure Bottom Roaming Overlay (100% Click-Through)
+   ========================================================= */
+
+:root {
+  --accent-color: #ff9f43;
+  --accent-gradient: linear-gradient(135deg, #ff9f43 0%, #ff5252 100%);
+  --text-main: #f5f6fa;
+  --text-muted: #a4b0be;
+  --shadow-popup: 0 10px 30px rgba(0, 0, 0, 0.5);
+  --font-pixel: 'Silkscreen', 'Inter', monospace;
+  --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: transparent !important;
+  color: var(--text-main);
+  font-family: var(--font-main);
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* =========================================================
+   Pure Bottom Stage (완전 투명 & 기본 마우스 관통)
+   ========================================================= */
+
+.pure-overlay-app {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background: transparent !important;
+  pointer-events: none; /* 컨테이너는 절대 마우스 이벤트를 가로채지 않음 */
+}
+
+.bottom-walking-stage {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* 걸어다니는 캐릭터 컨테이너만 마우스 이벤트 수신 */
+.roaming-pet-container {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end; /* 바닥 0px 칼밀착 정렬 */
+  cursor: pointer;
+  z-index: 100;
+  pointer-events: auto !important;
+  will-change: left;
+}
+
+.roaming-pet-container:hover {
+  transform: none !important; /* 호버 및 클릭 시 절대 확대하지 않음 */
+}
+
+.pet-character-wrapper {
+  position: relative;
+  display: flex;
+  align-items: flex-end; /* 캐릭터 발바닥 바닥선 밀착 */
+  justify-content: center;
+  line-height: 0;
+}
+
+.pet-nametag {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 7px;
+  background: rgba(18, 18, 24, 0.88);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-main);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.nametag-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.nametag-dot.green {
+  background: #2ed573;
+  box-shadow: 0 0 6px #2ed573;
+}
+
+.nametag-dot.sleep {
+  background: #a29bfe;
+  box-shadow: 0 0 6px #a29bfe;
+}
+
+.pet-nametag.is-me-tag {
+  border-color: rgba(255, 159, 67, 0.55);
+  background: rgba(28, 20, 15, 0.92);
+  color: #ffdda1;
+}
+
+/* 이름표 위치 옵션 */
+.roaming-pet-container.nametag-pos-bottom .pet-nametag {
+  order: 1;
+}
+
+.roaming-pet-container.nametag-pos-top .pet-nametag {
+  order: -1;
+}
+
+.roaming-pet-container.nametag-pos-hidden .pet-nametag {
+  display: none !important;
+}
+
+/* 10배 거대화 애니메이션 */
+.pixel-character-wrapper.is-mega-grow {
+  transform: scale(10) !important;
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  z-index: 9999 !important;
+  filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.8));
+}
+
+/* 드래그 중인 펫 버둥버둥 모션 */
+.roaming-pet-container.is-dragging {
+  cursor: grabbing !important;
+  z-index: 1000 !important;
+  transition: none !important;
+}
+
+.roaming-pet-container.is-dragging .pixel-character-wrapper {
+  animation: struggle-wiggle 0.2s infinite alternate ease-in-out !important;
+}
+
+@keyframes struggle-wiggle {
+  0% { transform: rotate(-12deg) scale(1.08); }
+  100% { transform: rotate(12deg) scale(1.08); }
+}
+
+/* 실시간 포물선 폭탄 투척 프로젝타일 & 타격 */
+.flying-bomb-projectile {
+  position: absolute;
+  font-size: 26px;
+  z-index: 600;
+  pointer-events: none;
+  transform: translate(-50%, 50%);
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.7));
+  animation: bomb-spin 0.48s linear infinite;
+}
+
+@keyframes bomb-spin {
+  0% { transform: translate(-50%, 50%) rotate(0deg); }
+  100% { transform: translate(-50%, 50%) rotate(360deg); }
+}
+
+.stone-hit-burst {
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 24px;
+  pointer-events: none;
+  animation: hit-pop 0.6s ease-out forwards;
+  z-index: 700;
+}
+
+@keyframes hit-pop {
+  0% { transform: translate(-50%, 0) scale(0.4); opacity: 0; }
+  35% { transform: translate(-50%, -12px) scale(1.3); opacity: 1; }
+  100% { transform: translate(-50%, -24px) scale(0.9); opacity: 0; }
+}
+
+/* =========================================================
+   Pixel Character Walking Animations
+   ========================================================= */
+
+.pixel-character-wrapper {
+  transform-origin: bottom center;
+}
+
+.pixel-character-wrapper.is-walking {
+  animation: walk-bounce 0.4s infinite alternate ease-in-out;
+}
+
+.walking-paws .paw-left {
+  animation: paw-step 0.4s infinite alternate ease-in-out;
+}
+
+.walking-paws .paw-right {
+  animation: paw-step 0.4s infinite alternate-reverse ease-in-out;
+}
+
+.pixel-character-wrapper.is-poked {
+  animation: poke-bounce 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+
+.pixel-character-wrapper .tail-wiggle {
+  transform-origin: 24px 23px;
+  animation: tail-sway 2.5s ease-in-out infinite;
+}
+
+@keyframes walk-bounce {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-4px); }
+}
+
+@keyframes paw-step {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-2px); }
+}
+
+@keyframes poke-bounce {
+  0% { transform: scale(1) translateY(0); }
+  25% { transform: scale(1.25, 0.8) translateY(4px); }
+  50% { transform: scale(0.9, 1.2) translateY(-16px); }
+  75% { transform: scale(1.05, 0.95) translateY(0); }
+  100% { transform: scale(1) translateY(0); }
+}
+
+@keyframes tail-sway {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(14deg); }
+}
+
+.poke-floating-effect {
+  position: absolute;
+  top: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 26px;
+  animation: float-and-fade 1.4s ease-out forwards;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.sleeping-zzz {
+  position: absolute;
+  top: -12px;
+  right: -6px;
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  color: #a29bfe;
+  font-weight: bold;
+  animation: zzz-float 2.2s infinite ease-in-out;
+  pointer-events: none;
+}
+
+.busy-sparkle, .away-bubble {
+  position: absolute;
+  top: -8px;
+  right: -4px;
+  font-size: 14px;
+  animation: bounce-subtle 1.8s infinite ease-in-out;
+  pointer-events: none;
+}
+
+@keyframes float-and-fade {
+  0% { opacity: 0; transform: translate(-50%, 8px) scale(0.6); }
+  30% { opacity: 1; transform: translate(-50%, -10px) scale(1.2); }
+  100% { opacity: 0; transform: translate(-50%, -28px) scale(0.9); }
+}
+
+@keyframes zzz-float {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.8); }
+  50% { opacity: 1; transform: translate(6px, -8px) scale(1.1); }
+  100% { opacity: 0; transform: translate(12px, -18px) scale(1.3); }
+}
+
+@keyframes bounce-subtle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+/* =========================================================
+   🌟 실제 데스크톱 모니터 바닥에 표시되는 산책 가이드라인 네온 빔
+   ========================================================= */
+
+.desktop-walking-guide-beam {
+  position: absolute;
+  bottom: 0;
+  height: 52px;
+  pointer-events: none;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  border-left: 2px dashed #ff9f43;
+  border-right: 2px dashed #ff9f43;
+  transition: left 0.05s ease-out, width 0.05s ease-out;
+  will-change: left, width;
+  animation: beam-fade-in 0.25s ease-out;
+}
+
+@keyframes beam-fade-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.guide-beam-floor-line {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #ff9f43 0%, #ff5252 50%, #ff9f43 100%);
+  box-shadow: 0 0 16px #ff9f43, 0 0 32px rgba(255, 82, 82, 0.6);
+}
+
+.guide-beam-glow {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: linear-gradient(180deg, transparent 0%, rgba(255, 159, 67, 0.08) 50%, rgba(255, 159, 67, 0.28) 100%);
+  pointer-events: none;
+}
+
+.guide-beam-marker {
+  position: absolute;
+  top: -24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 800;
+  color: #ff9f43;
+  text-shadow: 0 0 8px rgba(0, 0, 0, 0.9), 0 0 12px #ff9f43;
+}
+
+.guide-beam-marker.left-marker {
+  left: -14px;
+}
+
+.guide-beam-marker.right-marker {
+  right: -14px;
+}
+
+.marker-pin {
+  font-size: 9px;
+  color: #ff9f43;
+  line-height: 1;
+}
+
+.marker-val {
+  background: rgba(18, 19, 24, 0.9);
+  border: 1px solid #ff9f43;
+  padding: 1px 5px;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
+.guide-beam-center-tag {
+  position: absolute;
+  bottom: 12px;
+  padding: 3px 12px;
+  background: rgba(18, 19, 24, 0.88);
+  border: 1px solid rgba(255, 159, 67, 0.6);
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffdda1;
+  box-shadow: 0 0 12px rgba(255, 159, 67, 0.35);
+  white-space: nowrap;
+}
+
+/* =========================================================
+   Speech Bubble Component (다중 스택 & 상향 적층)
+   ========================================================= */
+
+.speech-bubble-stack {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none;
+}
+
+.speech-bubble-row {
+  display: flex;
+  justify-content: center;
+  white-space: nowrap;
+  animation: bubble-pop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.speech-bubble-row.is-older {
+  opacity: 0.82;
+  transform: scale(0.94);
+}
+
+.speech-bubble-row.is-fading-out {
+  animation: bubble-fade-out 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards !important;
+}
+
+.speech-bubble-chip {
+  background: #ffffff;
+  color: #1e272e;
+  padding: 4px 10px;
+  border-radius: 14px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  border: 1.5px solid #2f3542;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 320px;
+  white-space: nowrap;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+/* 테마 1: 기본 (Default 화이트) */
+.theme-default .speech-bubble-chip {
+  background: #ffffff;
+  color: #1e272e;
+  border: 1.5px solid #2f3542;
+}
+
+/* 테마 2: 네온 다크 (Neon Dark) */
+.theme-neon-dark .speech-bubble-chip {
+  background: #11141a;
+  color: #00ffcc;
+  border: 1.5px solid #00ffcc;
+  box-shadow: 0 0 12px rgba(0, 255, 204, 0.4), 0 6px 18px rgba(0, 0, 0, 0.6);
+}
+
+/* 테마 3: 레트로 픽셀 (Retro Pixel) */
+.theme-retro-pixel .speech-bubble-chip {
+  background: #fef9e7;
+  color: #2c3e50;
+  border: 2px solid #f39c12;
+  border-radius: 6px;
+  font-family: monospace, sans-serif;
+  box-shadow: 2px 2px 0px #d35400, 0 6px 18px rgba(0, 0, 0, 0.3);
+}
+
+/* 테마 4: 사이버 핑크 (Cyber Pink) */
+.theme-cyber-pink .speech-bubble-chip {
+  background: linear-gradient(135deg, #2b1055, #751075);
+  color: #ff76ac;
+  border: 1.5px solid #ff76ac;
+  box-shadow: 0 0 14px rgba(255, 118, 172, 0.45), 0 6px 18px rgba(0, 0, 0, 0.5);
+}
+
+/* Typing Indicator (···) */
+.typing-chip {
+  padding: 6px 12px;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+
+.typing-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: #ff9f43;
+  animation: typing-bounce 1.2s infinite ease-in-out;
+}
+
+.typing-dot:nth-child(1) {
+  animation-delay: 0s;
+}
+.typing-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.typing-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typing-bounce {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-5px);
+    opacity: 1;
+  }
+}
+
+@keyframes bubble-fade-out {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.9);
+  }
+}
+
+.bubble-sender {
+  font-size: 10px;
+  font-weight: 700;
+  color: #ff4757;
+  flex-shrink: 0;
+}
+
+.bubble-separator {
+  color: #a4b0be;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+.bubble-text {
+  font-size: 11px;
+  font-weight: 600;
+  color: #2f3542;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@keyframes bubble-pop {
+  0% { opacity: 0; transform: translateY(6px) scale(0.85); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* =========================================================
+   Interaction Menu (Popover)
+   ========================================================= */
+
+.interaction-menu-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  pointer-events: auto !important;
+}
+
+.interaction-menu-card {
+  background: #1e1e24;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  padding: 14px;
+  width: 260px;
+  box-shadow: var(--shadow-popup);
+  animation: bubble-pop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.interaction-menu-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.interaction-menu-title span {
+  color: var(--accent-color);
+}
+
+.interaction-buttons-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.interact-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  color: var(--text-main);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.interact-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: var(--accent-color);
+  transform: translateY(-1px);
+}
+
+.interact-btn .icon {
+  font-size: 16px;
+}
+
+.interact-btn.message-btn {
+  grid-column: span 2;
+  justify-content: center;
+  background: var(--accent-gradient);
+  border: none;
+  color: white;
+  margin-top: 4px;
+}
