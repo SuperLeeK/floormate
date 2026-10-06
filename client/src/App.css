@@ -196,12 +196,16 @@ html, body {
   animation: walk-bounce 0.4s infinite alternate ease-in-out;
 }
 
-.walking-paws .paw-left {
-  animation: paw-step 0.4s infinite alternate ease-in-out;
+.walking-paws .paw-left,
+.walking-limb-left {
+  transform-origin: center;
+  animation: paw-step 0.35s infinite alternate ease-in-out;
 }
 
-.walking-paws .paw-right {
-  animation: paw-step 0.4s infinite alternate-reverse ease-in-out;
+.walking-paws .paw-right,
+.walking-limb-right {
+  transform-origin: center;
+  animation: paw-step 0.35s infinite alternate-reverse ease-in-out;
 }
 
 .pixel-character-wrapper.is-poked {

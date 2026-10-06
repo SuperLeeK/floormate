@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { AppSettings, CharacterType } from '../types';
+import { CHARACTERS } from '../constants';
 import { PixelCharacter } from './PixelCharacter';
-import { X, Server, Hash, User, Sparkles, LayoutPanelLeft } from 'lucide-react';
+import { X, Hash, User, Sparkles, LayoutPanelLeft } from 'lucide-react';
 
 interface SettingsModalProps {
   settings: AppSettings;
@@ -9,21 +10,11 @@ interface SettingsModalProps {
   onClose: () => void;
 }
 
-const CHARACTERS: { type: CharacterType; label: string }[] = [
-  { type: 'cat', label: '치즈냥이' },
-  { type: 'dog', label: '시바댕댕' },
-  { type: 'rabbit', label: '흰토끼' },
-  { type: 'hamster', label: '햄스터' },
-  { type: 'fox', label: '붉은여우' },
-  { type: 'bear', label: '아기곰' },
-];
-
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   settings,
   onSave,
   onClose,
 }) => {
-  const [serverUrl, setServerUrl] = useState(settings.serverUrl);
   const [roomId, setRoomId] = useState(settings.roomId);
   const [userName, setUserName] = useState(settings.userName);
   const [userAvatar, setUserAvatar] = useState<CharacterType>(settings.userAvatar);
@@ -33,7 +24,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     e.preventDefault();
     onSave({
       ...settings,
-      serverUrl: serverUrl.trim() || 'http://localhost:3001',
+      serverUrl: settings.serverUrl,
       roomId: roomId.trim() || 'lobby',
       userName: userName.trim() || '익명의 친구',
       userAvatar,
@@ -112,24 +103,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </span>
           </div>
 
-          {/* 서버 주소 */}
-          <div className="form-group">
-            <label className="form-label" htmlFor="server-url-input">
-              <Server size={14} /> 중계 서버 URL (ngrok 또는 서버 주소)
-            </label>
-            <input
-              id="server-url-input"
-              type="text"
-              className="form-input"
-              value={serverUrl}
-              onChange={(e) => setServerUrl(e.target.value)}
-              placeholder="http://localhost:3001 또는 https://xxxx.ngrok-free.app"
-              required
-            />
-            <span className="form-hint">
-              로컬 테스트 시 <code>http://localhost:3001</code>, ngrok 공유 시 발급된 주소를 입력하세요.
-            </span>
-          </div>
+
 
           {/* 도킹 위치 */}
           <div className="form-group">

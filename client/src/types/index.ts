@@ -1,6 +1,6 @@
 export type UserStatus = 'online' | 'busy' | 'away' | 'sleep';
 
-export type CharacterType = 'cat' | 'dog' | 'rabbit' | 'hamster' | 'fox' | 'bear' | 'penguin' | 'tteokbokki';
+export type CharacterType = 'cat' | 'coffee' | 'dog' | 'egg' | 'frog' | 'hamburger' | 'makarong' | 'octopus' | 'ramen';
 
 export type BubbleTheme = 'default' | 'neon-dark' | 'retro-pixel' | 'cyber-pink';
 export type ThrowItemType = 'bomb' | 'stone' | 'heart' | 'lightning' | 'star' | 'waterball';

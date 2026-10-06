@@ -14,10 +14,11 @@ import {
 import { PixelCharacter } from './components/PixelCharacter';
 import { SpeechBubble, BubbleMessageItem } from './components/SpeechBubble';
 import { generateRoomCode } from './components/SettingsView';
+import { CHARACTER_THEMES } from './constants';
 import './App.css';
 
 const DEFAULT_SETTINGS: AppSettings = {
-  serverUrl: 'http://localhost:3001',
+  serverUrl: import.meta.env.VITE_SERVER_URL || 'http://localhost:3001',
   roomId: '',
   roomName: '메인 로비',
   userId: `user_${Math.random().toString(36).substring(2, 9)}`,
@@ -35,7 +36,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     {
       id: 'bot_dev_1',
       name: '루키봇',
-      avatar: 'dog',
+      avatar: 'cat',
       messages: [
         '커피 한잔하고 왔어요 ☕',
         '오늘도 화이팅입니다! 🔥',
@@ -72,6 +73,18 @@ function getSavedSettings(): AppSettings {
       }
       if (!Array.isArray(parsed.recentRooms) || (parsed.recentRooms.length > 0 && typeof parsed.recentRooms[0] === 'string')) {
         parsed.recentRooms = [{ code: parsed.roomId, name: parsed.roomName || '내 방' }];
+      }
+      if (!parsed.userAvatar || !CHARACTER_THEMES[parsed.userAvatar as CharacterType]) {
+        parsed.userAvatar = 'cat';
+      }
+      if (Array.isArray(parsed.bots)) {
+        parsed.bots = parsed.bots.map((b: any) => ({
+          ...b,
+          avatar: (!b.avatar || !CHARACTER_THEMES[b.avatar as CharacterType]) ? 'cat' : b.avatar,
+        }));
+      }
+      if (import.meta.env.VITE_SERVER_URL) {
+        parsed.serverUrl = import.meta.env.VITE_SERVER_URL;
       }
       return { ...DEFAULT_SETTINGS, ...parsed };
     } catch {

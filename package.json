@@ -7,6 +7,8 @@
     "dev:client": "cd client && npm run dev",
     "build:server": "cd server && npm run build",
     "build:client": "cd client && npm run build",
-    "dist:client": "cd client && npm run dist"
+    "dist:client": "cd client && npm run dist",
+    "tunnel": "cloudflared tunnel --url http://localhost:3001",
+    "dist:win": "cd client && npx electron-builder --win"
   }
 }

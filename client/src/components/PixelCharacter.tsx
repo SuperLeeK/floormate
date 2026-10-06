@@ -1,5 +1,6 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import { CharacterType, UserStatus } from '../types';
+import { CHARACTER_THEMES } from '../constants';
 
 interface PixelCharacterProps {
   type: CharacterType;
@@ -9,6 +10,8 @@ interface PixelCharacterProps {
   isPoked?: boolean;
   pokeEffect?: string | null;
   size?: number;
+  limbColor?: string;
+  outlineColor?: string;
 }
 
 export const PixelCharacter: React.FC<PixelCharacterProps> = ({
@@ -19,118 +22,48 @@ export const PixelCharacter: React.FC<PixelCharacterProps> = ({
   isPoked = false,
   pokeEffect = null,
   size = 64,
+  limbColor,
+  outlineColor,
 }) => {
-  // 걸을 때 2개 프레임을 번갈아 토글하는 내부 타이머 (PNG 조합용)
-  const [walkFrame, setWalkFrame] = useState<1 | 2>(1);
-  // 외부 커스텀 이미지 로드 실패 시 SVG로 폴백하기 위한 상태
-  const [imageError, setImageError] = useState(false);
+  // 안전한 캐릭터 타입 (알 수 없는 타입이나 오타가 들어올 경우 무조건 'cat'으로 fallback)
+  const safeType: CharacterType = CHARACTER_THEMES[type] ? type : 'cat';
 
-  useEffect(() => {
-    if (!isWalking) return;
-    const interval = setInterval(() => {
-      setWalkFrame((prev) => (prev === 1 ? 2 : 1));
-    }, 200);
-    return () => clearInterval(interval);
-  }, [isWalking]);
+  // 시도할 이미지 단계: 0: .png, 1: .webp, 2: cat fallback
+  const [retryStep, setRetryStep] = useState<number>(0);
 
-  // 외부 이미지 경로 후보 계산
-  // 1. poke 중일 때: poked.gif -> poked.png
-  // 2. sleep 중일 때: sleep.gif -> sleep.png
-  // 3. busy 중일 때: busy.gif -> busy.png
-  // 4. walking 중일 때: walk.gif -> walk_1.png / walk_2.png -> walk.png
-  // 5. idle 기본: idle.gif -> idle.png
-  const customImagePath = useMemo(() => {
-    if (imageError) return null;
+  const theme = useMemo(() => {
+    return CHARACTER_THEMES[safeType] || CHARACTER_THEMES.cat;
+  }, [safeType]);
 
-    const base = `/characters/${type}`;
-    if (isPoked) return `${base}/poked.gif`;
-    if (status === 'sleep') return `${base}/sleep.png`;
-    if (status === 'busy') return `${base}/busy.png`;
-    if (isWalking) return `${base}/walk_${walkFrame}.png`;
-    return `${base}/idle.png`;
-  }, [type, status, isPoked, isWalking, walkFrame, imageError]);
+  const activeLimbColor = limbColor || theme.limbColor;
+  const activeOutlineColor = outlineColor || theme.outlineColor || '#333333';
 
-  const palette = useMemo(() => {
-    switch (type) {
-      case 'cat':
-        return {
-          primary: '#ffaa5e',
-          secondary: '#ff8838',
-          accent: '#ffffff',
-          innerEar: '#ffb3ba',
-          eyes: '#2b2320',
-          blush: '#ff9aa2',
-        };
-      case 'dog':
-        return {
-          primary: '#e0a96d',
-          secondary: '#c48b52',
-          accent: '#fbf4ea',
-          innerEar: '#8c5836',
-          eyes: '#201a15',
-          blush: '#ffb3ba',
-        };
-      case 'rabbit':
-        return {
-          primary: '#ffffff',
-          secondary: '#ece5e5',
-          accent: '#ffffff',
-          innerEar: '#ffccd5',
-          eyes: '#ff5d73',
-          blush: '#ffccd5',
-        };
-      case 'hamster':
-        return {
-          primary: '#f9d29d',
-          secondary: '#e5b678',
-          accent: '#ffffff',
-          innerEar: '#ffb3ba',
-          eyes: '#30261f',
-          blush: '#ff8a98',
-        };
-      case 'fox':
-        return {
-          primary: '#ff6f3c',
-          secondary: '#e05320',
-          accent: '#ffffff',
-          innerEar: '#3b2e2a',
-          eyes: '#1e1b18',
-          blush: '#ff9a76',
-        };
-      case 'penguin':
-        return {
-          primary: '#2f3542',
-          secondary: '#ffa502',
-          accent: '#ffffff',
-          innerEar: '#ffa502',
-          eyes: '#1e272e',
-          blush: '#ff7f50',
-        };
-      case 'tteokbokki':
-        return {
-          primary: '#ff4757',
-          secondary: '#ff6b81',
-          accent: '#ffffff',
-          innerEar: '#2ed573',
-          eyes: '#2f3542',
-          blush: '#ffa502',
-        };
-      case 'bear':
-      default:
-        return {
-          primary: '#8d6e63',
-          secondary: '#6d4c41',
-          accent: '#d7ccc8',
-          innerEar: '#5d4037',
-          eyes: '#2c1e19',
-          blush: '#bcaaa4',
-        };
+  // 현재 이미지 경로 계산
+  const imageSrc = useMemo(() => {
+    if (retryStep >= 2) {
+      // 2단계 이상 실패 시 가장 안정적인 기본 고양이 정면으로 fallback
+      return '/characters/cat/front.png';
     }
-  }, [type]);
+    const ext = retryStep === 0 ? 'png' : 'webp';
+    const base = `/characters/${safeType}`;
+
+    if (isPoked) return `${base}/poked.${ext}`;
+    if (isWalking) {
+      return facingDirection === 'left' ? `${base}/left.${ext}` : `${base}/right.${ext}`;
+    }
+    return `${base}/front.${ext}`;
+  }, [safeType, isPoked, isWalking, facingDirection, retryStep]);
+
+  const handleImageError = () => {
+    setRetryStep((prev) => prev + 1);
+  };
 
   const isSleeping = status === 'sleep';
   const isBusy = status === 'busy';
   const isAway = status === 'away';
+
+  // 옆면 여부 (걷는 중이거나 좌우 방향을 보고 있을 때)
+  const isSideView = isWalking && !isPoked;
 
   return (
     <div
@@ -143,15 +76,13 @@ export const PixelCharacter: React.FC<PixelCharacterProps> = ({
         alignItems: 'flex-end',
         justifyContent: 'center',
         imageRendering: 'pixelated',
-        transform: facingDirection === 'left' ? 'scaleX(-1)' : 'scaleX(1)',
-        transition: 'transform 0.15s ease',
       }}
     >
       {/* 찌르기 이펙트 팝업 */}
       {pokeEffect && (
         <div
           className="poke-floating-effect"
-          style={{ transform: facingDirection === 'left' ? 'scaleX(-1) translateX(50%)' : 'translateX(-50%)' }}
+          style={{ transform: 'translateX(-50%)' }}
         >
           {pokeEffect === 'heart' && '💖'}
           {pokeEffect === 'poke' && '👉'}
@@ -162,165 +93,225 @@ export const PixelCharacter: React.FC<PixelCharacterProps> = ({
       )}
 
       {/* 상태 표시 장식 */}
-      {isSleeping && (
-        <div
-          className="sleeping-zzz"
-          style={{ transform: facingDirection === 'left' ? 'scaleX(-1)' : 'none' }}
-        >
-          Zzz...
-        </div>
-      )}
-      {isBusy && (
-        <div
-          className="busy-sparkle"
-          style={{ transform: facingDirection === 'left' ? 'scaleX(-1)' : 'none' }}
-        >
-          🔥
-        </div>
-      )}
-      {isAway && (
-        <div
-          className="away-bubble"
-          style={{ transform: facingDirection === 'left' ? 'scaleX(-1)' : 'none' }}
-        >
-          ☕
-        </div>
-      )}
+      {isSleeping && <div className="sleeping-zzz">Zzz...</div>}
+      {isBusy && <div className="busy-sparkle">🔥</div>}
+      {isAway && <div className="away-bubble">☕</div>}
 
-      {/* 1. 외부 커스텀 이미지 (GIF 또는 PNG 조합)가 있을 경우 */}
-      {customImagePath && !imageError ? (
+      {/* 캐릭터 컨테이너 */}
+      <div
+        className="character-image-container"
+        style={{
+          position: 'relative',
+          width: size,
+          height: size,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {/* [Layer 0] 몸통 뒤 레이어: 옆면일 때 뒷발을 몸통 뒤로 배치하여 자연스러운 깊이감 부여 */}
+        {isSideView && (
+          <svg
+            viewBox="0 0 64 64"
+            width={size}
+            height={size}
+            className="character-limbs-back"
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              pointerEvents: 'none',
+              overflow: 'visible',
+              zIndex: 0,
+            }}
+          >
+            {facingDirection === 'left' ? (
+              <ellipse
+                className="walking-limb-right"
+                cx="38"
+                cy="58"
+                rx="4.2"
+                ry="2.8"
+                fill={activeLimbColor}
+                stroke={activeOutlineColor}
+                strokeWidth="1.2"
+                style={{ opacity: 0.75, filter: 'brightness(0.85)' }}
+              />
+            ) : (
+              <ellipse
+                className="walking-limb-right"
+                cx="26"
+                cy="58"
+                rx="4.2"
+                ry="2.8"
+                fill={activeLimbColor}
+                stroke={activeOutlineColor}
+                strokeWidth="1.2"
+                style={{ opacity: 0.75, filter: 'brightness(0.85)' }}
+              />
+            )}
+          </svg>
+        )}
+
+        {/* [Layer 1] 캐릭터 몸통 이미지: 2px 위로 올려 발이 더 밑으로 시원하게 디뎌지도록 조정 */}
         <img
-          src={customImagePath}
-          alt={type}
+          src={imageSrc}
+          alt={safeType}
           width={size}
           height={size}
           style={{
             objectFit: 'contain',
             imageRendering: 'pixelated',
             pointerEvents: 'none',
+            position: 'relative',
+            zIndex: 1,
+            transform: 'translateY(-2px)',
           }}
-          onError={() => setImageError(true)}
+          onError={handleImageError}
         />
-      ) : (
-        /* 2. 외부 이미지가 없을 때 기본 내장 고품질 SVG 픽셀 캐릭터 렌더링 */
+
+        {/* [Layer 2] 몸통 앞 레이어: 앞발 및 손 */}
         <svg
-          viewBox="0 0 32 28"
+          viewBox="0 0 64 64"
           width={size}
-          height={Math.round((size * 28) / 32)}
-          className="pixel-sprite"
-          style={{ overflow: 'visible', verticalAlign: 'bottom' }}
+          height={size}
+          className="character-limbs-front"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            pointerEvents: 'none',
+            overflow: 'visible',
+            zIndex: 2,
+          }}
         >
-
-          {/* 귀 */}
-          {type === 'rabbit' ? (
-            <g className="rabbit-ears">
-              <rect x="9" y="3" width="4" height="10" rx="1" fill={palette.primary} />
-              <rect x="10" y="5" width="2" height="6" fill={palette.innerEar} />
-              <rect x="19" y="3" width="4" height="10" rx="1" fill={palette.primary} />
-              <rect x="20" y="5" width="2" height="6" fill={palette.innerEar} />
-            </g>
-          ) : type === 'cat' || type === 'fox' ? (
-            <g className="pointy-ears">
-              <path d="M7 13 L11 7 L14 13 Z" fill={palette.primary} />
-              <path d="M8 12 L11 8 L13 12 Z" fill={palette.innerEar} />
-              <path d="M18 13 L21 7 L25 13 Z" fill={palette.primary} />
-              <path d="M19 12 L21 8 L24 12 Z" fill={palette.innerEar} />
-            </g>
-          ) : type === 'dog' ? (
-            <g className="floppy-ears">
-              <rect x="6" y="11" width="4" height="8" rx="2" fill={palette.secondary} />
-              <rect x="22" y="11" width="4" height="8" rx="2" fill={palette.secondary} />
-            </g>
-          ) : (
-            <g className="round-ears">
-              <circle cx="9" cy="11" r="3.5" fill={palette.primary} />
-              <circle cx="9" cy="11" r="2" fill={palette.innerEar} />
-              <circle cx="23" cy="11" r="3.5" fill={palette.primary} />
-              <circle cx="23" cy="11" r="2" fill={palette.innerEar} />
-            </g>
-          )}
-
-          {/* 머리 및 몸통 */}
-          <g className="character-body">
-            <rect x="7" y="11" width="18" height="15" rx="5" fill={palette.primary} />
-
-            {type === 'fox' || type === 'cat' || type === 'hamster' ? (
-              <path
-                d="M12 21 C12 21 16 19 20 21 L20 25 C18 26 14 26 12 25 Z"
-                fill={palette.accent}
-              />
-            ) : null}
-
-            {/* 눈 */}
-            {isSleeping ? (
-              <g className="eyes-closed">
-                <path d="M10 18 Q12 20 14 18" stroke={palette.eyes} strokeWidth="1.8" fill="none" strokeLinecap="round" />
-                <path d="M18 18 Q20 20 22 18" stroke={palette.eyes} strokeWidth="1.8" fill="none" strokeLinecap="round" />
-              </g>
-            ) : isPoked ? (
-              <g className="eyes-poked">
-                <circle cx="12" cy="17" r="2.5" fill={palette.eyes} />
-                <circle cx="12.5" cy="16.5" r="0.8" fill="#fff" />
-                <circle cx="20" cy="17" r="2.5" fill={palette.eyes} />
-                <circle cx="20.5" cy="16.5" r="0.8" fill="#fff" />
-              </g>
+          {/* 발 (Feet) */}
+          <g className="character-front-feet">
+            {isSideView ? (
+              /* 옆면일 때는 앞쪽에 딛는 다리 1개만 앞 레이어에 깔끔하게 표시 */
+              facingDirection === 'left' ? (
+                <ellipse
+                  className="walking-limb-left"
+                  cx="25"
+                  cy="59.5"
+                  rx="5"
+                  ry="3.2"
+                  fill={activeLimbColor}
+                  stroke={activeOutlineColor}
+                  strokeWidth="1.2"
+                />
+              ) : (
+                <ellipse
+                  className="walking-limb-left"
+                  cx="39"
+                  cy="59.5"
+                  rx="5"
+                  ry="3.2"
+                  fill={activeLimbColor}
+                  stroke={activeOutlineColor}
+                  strokeWidth="1.2"
+                />
+              )
             ) : (
-              <g className="eyes-normal">
-                <rect x="11" y="16" width="2.5" height="3" rx="1" fill={palette.eyes} />
-                <rect x="11.5" y="16.5" width="1" height="1" fill="#ffffff" />
-                <rect x="18.5" y="16" width="2.5" height="3" rx="1" fill={palette.eyes} />
-                <rect x="19" y="16.5" width="1" height="1" fill="#ffffff" />
-              </g>
+              /* 정면 / 놀란 상태: 양발을 바닥에 나란히 디딤 */
+              <>
+                <ellipse
+                  cx="23"
+                  cy="59.5"
+                  rx="5"
+                  ry="3.2"
+                  fill={activeLimbColor}
+                  stroke={activeOutlineColor}
+                  strokeWidth="1.2"
+                />
+                <ellipse
+                  cx="41"
+                  cy="59.5"
+                  rx="5"
+                  ry="3.2"
+                  fill={activeLimbColor}
+                  stroke={activeOutlineColor}
+                  strokeWidth="1.2"
+                />
+              </>
             )}
+          </g>
 
-            {/* 볼터치 */}
-            <ellipse cx="9.5" cy="20" rx="1.8" ry="1.2" fill={palette.blush} opacity="0.8" />
-            <ellipse cx="22.5" cy="20" rx="1.8" ry="1.2" fill={palette.blush} opacity="0.8" />
-
-            {/* 코 & 입 */}
-            <circle cx="16" cy="19.5" r="1.2" fill={palette.eyes} />
+          {/* 손 (Hands) */}
+          <g className="character-hands">
             {isPoked ? (
-              <circle cx="16" cy="22" r="1.2" fill={palette.eyes} />
+              /* 콕 찔렸을 때: 놀라서 양손 번쩍 만세 */
+              <>
+                <ellipse
+                  cx="14"
+                  cy="30"
+                  rx="4.2"
+                  ry="4.2"
+                  fill={activeLimbColor}
+                  stroke={activeOutlineColor}
+                  strokeWidth="1.2"
+                />
+                <ellipse
+                  cx="50"
+                  cy="30"
+                  rx="4.2"
+                  ry="4.2"
+                  fill={activeLimbColor}
+                  stroke={activeOutlineColor}
+                  strokeWidth="1.2"
+                />
+              </>
+            ) : isSideView ? (
+              /* 옆면일 때: 앞쪽 손 1개만 자연스러운 위치에 얹음 */
+              facingDirection === 'left' ? (
+                <ellipse
+                  className="walking-limb-left"
+                  cx="22"
+                  cy="43"
+                  rx="4"
+                  ry="3.6"
+                  fill={activeLimbColor}
+                  stroke={activeOutlineColor}
+                  strokeWidth="1.2"
+                />
+              ) : (
+                <ellipse
+                  className="walking-limb-left"
+                  cx="42"
+                  cy="43"
+                  rx="4"
+                  ry="3.6"
+                  fill={activeLimbColor}
+                  stroke={activeOutlineColor}
+                  strokeWidth="1.2"
+                />
+              )
             ) : (
-              <path
-                d="M14.5 21 Q16 22 17.5 21"
-                stroke={palette.eyes}
-                strokeWidth="1.2"
-                fill="none"
-                strokeLinecap="round"
-              />
+              /* 정면 대기 상태: 배 양쪽에 다소곳이 모은 양손 */
+              <>
+                <ellipse
+                  cx="20"
+                  cy="43"
+                  rx="3.8"
+                  ry="3.8"
+                  fill={activeLimbColor}
+                  stroke={activeOutlineColor}
+                  strokeWidth="1.2"
+                />
+                <ellipse
+                  cx="44"
+                  cy="43"
+                  rx="3.8"
+                  ry="3.8"
+                  fill={activeLimbColor}
+                  stroke={activeOutlineColor}
+                  strokeWidth="1.2"
+                />
+              </>
             )}
-
-            {/* 고양이 수염 */}
-            {type === 'cat' && (
-              <g opacity="0.6">
-                <line x1="6" y1="18" x2="9" y2="18.5" stroke={palette.eyes} strokeWidth="0.8" />
-                <line x1="6" y1="20" x2="9" y2="19.8" stroke={palette.eyes} strokeWidth="0.8" />
-                <line x1="23" y1="18.5" x2="26" y2="18" stroke={palette.eyes} strokeWidth="0.8" />
-                <line x1="23" y1="19.8" x2="26" y2="20" stroke={palette.eyes} strokeWidth="0.8" />
-              </g>
-            )}
-
-            {/* 발 */}
-            <g className={`character-paws ${isWalking ? 'walking-paws' : ''}`}>
-              <rect className="paw-left" x="10" y="25" width="3.5" height="2.5" rx="1" fill={palette.secondary} />
-              <rect className="paw-right" x="18.5" y="25" width="3.5" height="2.5" rx="1" fill={palette.secondary} />
-            </g>
-
-            {/* 꼬리 */}
-            {type === 'cat' || type === 'fox' || type === 'dog' ? (
-              <path
-                className="tail-wiggle"
-                d="M24 23 Q29 20 28 16"
-                stroke={palette.primary}
-                strokeWidth="3.5"
-                fill="none"
-                strokeLinecap="round"
-              />
-            ) : null}
           </g>
         </svg>
-      )}
+      </div>
     </div>
   );
 };

@@ -651,6 +651,34 @@
   background: rgba(255, 255, 255, 0.14);
 }
 
+/* 3단 스택형 아지트 카드 */
+.azit-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.card-desc-action-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mac-text-input.full-width {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.room-code-display.full-width {
+  display: block;
+  text-align: center;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px 14px;
+  font-size: 14.5px;
+}
+
 .input-with-button-row {
   display: flex;
   align-items: center;

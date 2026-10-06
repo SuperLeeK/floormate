@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   AppSettings,
   CharacterType,
@@ -7,9 +7,9 @@ import {
   RecentRoomItem,
   BotConfig,
   BubbleTheme,
-  ThrowItemType
-} from '../types';
-import { PixelCharacter } from './PixelCharacter';
+  ThrowItemType,
+} from "../types";
+import { PixelCharacter } from "./PixelCharacter";
 import {
   X,
   User,
@@ -22,115 +22,136 @@ import {
   Monitor,
   MoveHorizontal,
   Bot,
-  Server,
   MessageSquareText,
   Sidebar,
-  Eye
-} from 'lucide-react';
-import './SettingsView.css';
-
-// 지원 캐릭터 목록
-const CHARACTERS: { type: CharacterType; label: string }[] = [
-  { type: 'hamster', label: '아기 햄스터' },
-  { type: 'cat', label: '아기 고양이' },
-  { type: 'dog', label: '아기 강아지' },
-  { type: 'rabbit', label: '아기 토끼' },
-  { type: 'penguin', label: '아기 펭귄' },
-  { type: 'tteokbokki', label: '떡볶이' },
-  { type: 'bear', label: '아기 곰' },
-  { type: 'fox', label: '붉은 여우' }
-];
+  Eye,
+} from "lucide-react";
+import { CHARACTERS } from "../constants";
+import "./SettingsView.css";
 
 // 말풍선 테마 목록
 const BUBBLE_THEMES: { id: BubbleTheme; label: string; isPro?: boolean }[] = [
-  { id: 'default', label: '기본 말풍선', isPro: false },
-  { id: 'neon-dark', label: '네온 다크', isPro: false },
-  { id: 'retro-pixel', label: '픽셀 레트로', isPro: true },
-  { id: 'cyber-pink', label: '사이버 핑크', isPro: true },
+  { id: "default", label: "기본 말풍선", isPro: false },
+  { id: "neon-dark", label: "네온 다크", isPro: false },
+  { id: "retro-pixel", label: "픽셀 레트로", isPro: true },
+  { id: "cyber-pink", label: "사이버 핑크", isPro: true },
 ];
 
 // 투척 아이템 테마 목록
-const THROW_ITEMS: { id: ThrowItemType; label: string; emoji: string; isPro?: boolean }[] = [
-  { id: 'bomb', label: '기본 폭탄', emoji: '💣', isPro: false },
-  { id: 'stone', label: '단단한 돌멩이', emoji: '🪨', isPro: false },
-  { id: 'heart', label: '하트 뿅뿅', emoji: '💖', isPro: false },
-  { id: 'lightning', label: '찌릿 번개', emoji: '⚡', isPro: true },
-  { id: 'star', label: '황금 별', emoji: '⭐', isPro: true },
-  { id: 'waterball', label: '물풍선', emoji: '🎈', isPro: true },
+const THROW_ITEMS: {
+  id: ThrowItemType;
+  label: string;
+  emoji: string;
+  isPro?: boolean;
+}[] = [
+  { id: "bomb", label: "기본 폭탄", emoji: "💣", isPro: false },
+  { id: "stone", label: "단단한 돌멩이", emoji: "🪨", isPro: false },
+  { id: "heart", label: "하트 뿅뿅", emoji: "💖", isPro: false },
+  { id: "lightning", label: "찌릿 번개", emoji: "⚡", isPro: true },
+  { id: "star", label: "황금 별", emoji: "⭐", isPro: true },
+  { id: "waterball", label: "물풍선", emoji: "🎈", isPro: true },
 ];
 
 function getSavedSettings(): AppSettings {
   try {
-    const saved = localStorage.getItem('dopamine_sidey_settings');
-    if (saved) return JSON.parse(saved);
+    const saved = localStorage.getItem("dopamine_sidey_settings");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (
+        !parsed.userAvatar ||
+        !CHARACTERS.some((c) => c.type === parsed.userAvatar)
+      ) {
+        parsed.userAvatar = "cat";
+      }
+      return parsed;
+    }
   } catch {
     // fallback
   }
   return {
-    serverUrl: 'http://localhost:3001',
-    roomId: 'floor-main',
-    roomName: '내 방',
+    serverUrl: "http://localhost:3001",
+    roomId: "floor-main",
+    roomName: "내 방",
     userId: `user_${Math.random().toString(36).substr(2, 6)}`,
-    userName: '마먼',
-    userAvatar: 'bear',
-    dockSide: 'right',
+    userName: "마먼",
+    userAvatar: "cat",
+    dockSide: "right",
     soundEnabled: true,
     maxBubbleCount: 2,
     bubbleDurationSec: 6,
-    nameTagPosition: 'top',
+    nameTagPosition: "top",
     nameTagSpacing: 4,
     walkingArea: { minPercent: 0, maxPercent: 100 },
-    recentRooms: [{ code: 'floor-main', name: '내 방' }],
-    bubbleTheme: 'default',
-    throwItem: 'bomb',
+    recentRooms: [{ code: "floor-main", name: "내 방" }],
+    bubbleTheme: "default",
+    throwItem: "bomb",
   };
 }
 
 export function generateRoomCode(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let result = '';
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let result = "";
   for (let i = 0; i < 6; i++) {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return result;
 }
 
-type SidebarTab = 'profile' | 'group' | 'shop' | 'settings';
+type SidebarTab = "profile" | "group" | "shop" | "settings";
 
 export const SettingsView: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<SidebarTab>('profile');
+  const [activeTab, setActiveTab] = useState<SidebarTab>("profile");
   const [settings] = useState<AppSettings>(getSavedSettings);
 
   // 1. 프로필
   const [userName, setUserName] = useState(settings.userName);
-  const [userAvatar, setUserAvatar] = useState<CharacterType>(settings.userAvatar);
-  const [nameTagPosition, setNameTagPosition] = useState<NameTagPosition>(settings.nameTagPosition || 'top');
-  const [nameTagSpacing, setNameTagSpacing] = useState<number>(settings.nameTagSpacing ?? 4);
+  const [userAvatar, setUserAvatar] = useState<CharacterType>(
+    settings.userAvatar,
+  );
+  const [nameTagPosition, setNameTagPosition] = useState<NameTagPosition>(
+    settings.nameTagPosition || "top",
+  );
+  const [nameTagSpacing, setNameTagSpacing] = useState<number>(
+    settings.nameTagSpacing ?? 4,
+  );
 
   // 2. 꾸미기/상점
-  const [bubbleTheme, setBubbleTheme] = useState<BubbleTheme>(settings.bubbleTheme || 'default');
-  const [throwItem, setThrowItem] = useState<ThrowItemType>(settings.throwItem || 'bomb');
-  const [maxBubbleCount, setMaxBubbleCount] = useState<number>(settings.maxBubbleCount || 2);
-  const [bubbleDurationSec, setBubbleDurationSec] = useState<number>(settings.bubbleDurationSec || 6);
+  const [bubbleTheme, setBubbleTheme] = useState<BubbleTheme>(
+    settings.bubbleTheme || "default",
+  );
+  const [throwItem, setThrowItem] = useState<ThrowItemType>(
+    settings.throwItem || "bomb",
+  );
+  const [maxBubbleCount, setMaxBubbleCount] = useState<number>(
+    settings.maxBubbleCount || 2,
+  );
+  const [bubbleDurationSec, setBubbleDurationSec] = useState<number>(
+    settings.bubbleDurationSec || 6,
+  );
 
   // 3. 그룹 (세션)
   const [roomId, setRoomId] = useState(settings.roomId);
-  const [roomName, setRoomName] = useState(settings.roomName || '내 방');
-  const [recentRooms, setRecentRooms] = useState<RecentRoomItem[]>(settings.recentRooms || []);
-  const [newRoomNameInput, setNewRoomNameInput] = useState('');
-  const [joinCodeInput, setJoinCodeInput] = useState('');
-  const [joinNameInput, setJoinNameInput] = useState('');
+  const [roomName, setRoomName] = useState(settings.roomName || "내 방");
+  const [recentRooms, setRecentRooms] = useState<RecentRoomItem[]>(
+    settings.recentRooms || [],
+  );
+  const [newRoomNameInput, setNewRoomNameInput] = useState("");
+  const [joinCodeInput, setJoinCodeInput] = useState("");
+  const [joinNameInput, setJoinNameInput] = useState("");
   const [copied, setCopied] = useState(false);
 
   // 4. 앱 설정
   const [displays, setDisplays] = useState<DisplayInfo[]>([]);
-  const [selectedDisplayId, setSelectedDisplayId] = useState<number | undefined>(settings.selectedDisplayId);
-  const [walkingArea, setWalkingArea] = useState(settings.walkingArea || { minPercent: 0, maxPercent: 100 });
+  const [selectedDisplayId, setSelectedDisplayId] = useState<
+    number | undefined
+  >(settings.selectedDisplayId);
+  const [walkingArea, setWalkingArea] = useState(
+    settings.walkingArea || { minPercent: 0, maxPercent: 100 },
+  );
   const [savedFeedback, setSavedFeedback] = useState(false);
 
   // DEV 전용
   const [bots, setBots] = useState<BotConfig[]>(settings.bots || []);
-  const [serverUrl, setServerUrl] = useState(settings.serverUrl);
 
   // 디스플레이 목록 로드
   useEffect(() => {
@@ -149,15 +170,18 @@ export const SettingsView: React.FC = () => {
   // 산책 영역 가이드 실시간 투사 (깜빡임 없이 rAF 스로틀링)
   const rafRef = useRef<number | null>(null);
 
-  const updateWalkingAreaPreview = useCallback((area: { minPercent: number; maxPercent: number }) => {
-    if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    rafRef.current = requestAnimationFrame(() => {
-      window.electronAPI?.previewWalkingArea?.(area);
-    });
-  }, []);
+  const updateWalkingAreaPreview = useCallback(
+    (area: { minPercent: number; maxPercent: number }) => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(() => {
+        window.electronAPI?.previewWalkingArea?.(area);
+      });
+    },
+    [],
+  );
 
   useEffect(() => {
-    if (activeTab === 'settings') {
+    if (activeTab === "settings") {
       updateWalkingAreaPreview(walkingArea);
     } else {
       window.electronAPI?.previewWalkingArea?.(null);
@@ -165,7 +189,7 @@ export const SettingsView: React.FC = () => {
   }, [activeTab]);
 
   useEffect(() => {
-    if (activeTab === 'settings') {
+    if (activeTab === "settings") {
       updateWalkingAreaPreview(walkingArea);
     }
   }, [walkingArea, activeTab, updateWalkingAreaPreview]);
@@ -194,34 +218,44 @@ export const SettingsView: React.FC = () => {
 
   const handleCreateNewRoom = () => {
     const newCode = generateRoomCode();
-    const finalName = newRoomNameInput.trim() || '새로운 아지트';
+    const finalName = newRoomNameInput.trim() || "새로운 아지트";
     setRoomId(newCode);
     setRoomName(finalName);
-    const updated = [{ code: newCode, name: finalName }, ...recentRooms.filter((r) => r.code !== newCode)].slice(0, 6);
+    const updated = [
+      { code: newCode, name: finalName },
+      ...recentRooms.filter((r) => r.code !== newCode),
+    ].slice(0, 6);
     setRecentRooms(updated);
-    setNewRoomNameInput('');
+    setNewRoomNameInput("");
   };
 
   const handleJoinWithCode = () => {
     const formatted = joinCodeInput.trim().toUpperCase();
     if (!formatted) return;
-    const finalName = joinNameInput.trim() || '친구 방';
+    const finalName = joinNameInput.trim() || "친구 방";
     setRoomId(formatted);
     setRoomName(finalName);
-    const updated = [{ code: formatted, name: finalName }, ...recentRooms.filter((r) => r.code !== formatted)].slice(0, 6);
+    const updated = [
+      { code: formatted, name: finalName },
+      ...recentRooms.filter((r) => r.code !== formatted),
+    ].slice(0, 6);
     setRecentRooms(updated);
-    setJoinCodeInput('');
-    setJoinNameInput('');
+    setJoinCodeInput("");
+    setJoinNameInput("");
   };
 
   const handleAddBot = () => {
-    const botTypes: CharacterType[] = ['cat', 'dog', 'rabbit', 'hamster', 'fox', 'bear', 'penguin', 'tteokbokki'];
+    const botTypes = CHARACTERS.map((c) => c.type);
     const randomAvatar = botTypes[Math.floor(Math.random() * botTypes.length)];
     const newBot: BotConfig = {
       id: `bot_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
       name: `루키봇_${bots.length + 1}`,
       avatar: randomAvatar,
-      messages: ['오늘도 화이팅!', '열일 중이신가요? 🔥', '간식 먹고 합시다 ☕'],
+      messages: [
+        "오늘도 화이팅!",
+        "열일 중이신가요? 🔥",
+        "간식 먹고 합시다 ☕",
+      ],
       typingDelaySec: 3,
       intervalSec: 15,
       enabled: true,
@@ -237,7 +271,7 @@ export const SettingsView: React.FC = () => {
     e.preventDefault();
     const updated: AppSettings = {
       ...settings,
-      userName: userName.trim() || '친구',
+      userName: userName.trim() || "친구",
       userAvatar,
       bubbleTheme,
       throwItem,
@@ -251,11 +285,11 @@ export const SettingsView: React.FC = () => {
       maxBubbleCount,
       bubbleDurationSec,
       bots,
-      serverUrl: serverUrl.trim() || settings.serverUrl,
+      serverUrl: settings.serverUrl,
     };
 
-    localStorage.setItem('dopamine_sidey_settings', JSON.stringify(updated));
-    localStorage.setItem('dopamine_settings', JSON.stringify(updated));
+    localStorage.setItem("dopamine_sidey_settings", JSON.stringify(updated));
+    localStorage.setItem("dopamine_settings", JSON.stringify(updated));
     window.electronAPI?.saveSettings(updated);
 
     // 저장 및 적용 시 창을 닫지 않고 피드백만 표시!
@@ -271,8 +305,18 @@ export const SettingsView: React.FC = () => {
         {/* 상단 macOS 네이티브 스타일 타이틀바 */}
         <div className="mac-settings-titlebar">
           <div className="traffic-lights">
-            <button type="button" className="traffic-light close" onClick={handleClose} title="닫기" />
-            <button type="button" className="traffic-light minimize" onClick={() => window.electronAPI?.minimizeWindow?.()} title="최소화" />
+            <button
+              type="button"
+              className="traffic-light close"
+              onClick={handleClose}
+              title="닫기"
+            />
+            <button
+              type="button"
+              className="traffic-light minimize"
+              onClick={() => window.electronAPI?.minimizeWindow?.()}
+              title="최소화"
+            />
             <span className="traffic-light zoom" />
           </div>
           <div className="titlebar-center">
@@ -289,7 +333,11 @@ export const SettingsView: React.FC = () => {
               <Eye size={13} />
               <span>실시간 미리보기</span>
             </button>
-            <button type="button" className="titlebar-close-icon" onClick={handleClose}>
+            <button
+              type="button"
+              className="titlebar-close-icon"
+              onClick={handleClose}
+            >
               <X size={15} />
             </button>
           </div>
@@ -302,32 +350,32 @@ export const SettingsView: React.FC = () => {
             <div className="sidebar-nav">
               <button
                 type="button"
-                className={`sidebar-nav-item ${activeTab === 'profile' ? 'active' : ''}`}
-                onClick={() => setActiveTab('profile')}
+                className={`sidebar-nav-item ${activeTab === "profile" ? "active" : ""}`}
+                onClick={() => setActiveTab("profile")}
               >
                 <User size={15} />
                 <span>내 프로필</span>
               </button>
               <button
                 type="button"
-                className={`sidebar-nav-item ${activeTab === 'group' ? 'active' : ''}`}
-                onClick={() => setActiveTab('group')}
+                className={`sidebar-nav-item ${activeTab === "group" ? "active" : ""}`}
+                onClick={() => setActiveTab("group")}
               >
                 <Users size={15} />
                 <span>그룹</span>
               </button>
               <button
                 type="button"
-                className={`sidebar-nav-item ${activeTab === 'shop' ? 'active' : ''}`}
-                onClick={() => setActiveTab('shop')}
+                className={`sidebar-nav-item ${activeTab === "shop" ? "active" : ""}`}
+                onClick={() => setActiveTab("shop")}
               >
                 <Sparkles size={15} />
                 <span>꾸미기·상점</span>
               </button>
               <button
                 type="button"
-                className={`sidebar-nav-item ${activeTab === 'settings' ? 'active' : ''}`}
-                onClick={() => setActiveTab('settings')}
+                className={`sidebar-nav-item ${activeTab === "settings" ? "active" : ""}`}
+                onClick={() => setActiveTab("settings")}
               >
                 <SettingsIcon size={15} />
                 <span>앱 설정</span>
@@ -349,14 +397,16 @@ export const SettingsView: React.FC = () => {
               {/* ========================================================= */}
               {/* 1. 내 프로필 탭 */}
               {/* ========================================================= */}
-              {activeTab === 'profile' && (
+              {activeTab === "profile" && (
                 <div className="tab-section">
                   <div className="section-header">
                     <div className="section-title-row">
                       <User size={16} className="section-icon" />
                       <h2>내 프로필</h2>
                     </div>
-                    <p className="section-desc">친구들에게 보이는 이름과 캐릭터, 이름표 위치를 설정합니다.</p>
+                    <p className="section-desc">
+                      친구들에게 보이는 이름과 캐릭터, 이름표 위치를 설정합니다.
+                    </p>
                   </div>
 
                   {/* 독립 실시간 미리보기 팝업 유도 배너 */}
@@ -365,7 +415,10 @@ export const SettingsView: React.FC = () => {
                       <Eye size={15} className="banner-eye-icon" />
                       <div>
                         <span className="banner-title">실시간 미리보기 창</span>
-                        <span className="banner-desc">캐릭터 외형과 이름표 위치를 독립 윈도우에서 실시간으로 확인해보세요.</span>
+                        <span className="banner-desc">
+                          캐릭터 외형과 이름표 위치를 독립 윈도우에서 실시간으로
+                          확인해보세요.
+                        </span>
                       </div>
                     </div>
                     <button
@@ -381,8 +434,15 @@ export const SettingsView: React.FC = () => {
                   <div className="setting-card">
                     <div className="setting-card-row">
                       <div className="setting-label-col">
-                        <label className="card-label" htmlFor="user-nickname-input">닉네임</label>
-                        <span className="card-sublabel">친구들의 픽셀 월드와 메시지에 표시되는 이름 · 2~8자</span>
+                        <label
+                          className="card-label"
+                          htmlFor="user-nickname-input"
+                        >
+                          닉네임
+                        </label>
+                        <span className="card-sublabel">
+                          친구들의 픽셀 월드와 메시지에 표시되는 이름 · 2~8자
+                        </span>
                       </div>
                       <input
                         id="user-nickname-input"
@@ -400,7 +460,10 @@ export const SettingsView: React.FC = () => {
                   <div className="setting-card">
                     <div className="setting-card-header">
                       <label className="card-label">캐릭터</label>
-                      <span className="card-sublabel">친구 화면에서 나를 나타낼 픽셀 동물을 선택할 수 있습니다.</span>
+                      <span className="card-sublabel">
+                        친구 화면에서 나를 나타낼 픽셀 동물을 선택할 수
+                        있습니다.
+                      </span>
                     </div>
 
                     <div className="character-select-grid">
@@ -410,7 +473,7 @@ export const SettingsView: React.FC = () => {
                           <button
                             type="button"
                             key={char.type}
-                            className={`character-select-card ${isSelected ? 'selected' : ''}`}
+                            className={`character-select-card ${isSelected ? "selected" : ""}`}
                             onClick={() => setUserAvatar(char.type)}
                           >
                             {isSelected && (
@@ -419,45 +482,58 @@ export const SettingsView: React.FC = () => {
                               </div>
                             )}
                             <div className="character-preview-sprite">
-                              <PixelCharacter type={char.type} status="online" size={44} />
+                              <PixelCharacter
+                                type={char.type}
+                                status="online"
+                                size={44}
+                              />
                             </div>
-                            <span className="character-label">{char.label}</span>
+                            <span className="character-label">
+                              {char.label}
+                            </span>
                           </button>
                         );
                       })}
                     </div>
-                    <div className="card-footer-hint">캐릭터와 닉네임은 그룹 안에서 중복해서 선택할 수 있습니다.</div>
+                    <div className="card-footer-hint">
+                      캐릭터와 닉네임은 그룹 안에서 중복해서 선택할 수 있습니다.
+                    </div>
                   </div>
 
                   {/* 이름표 위치 & 간격 설정 (앱 설정 -> 내 프로필로 이동) */}
                   <div className="setting-card">
                     <div className="setting-card-header">
                       <label className="card-label">이름표 위치 & 간격</label>
-                      <span className="card-sublabel">캐릭터 기준 이름표의 표시 위치와 띄울 간격을 설정합니다.</span>
+                      <span className="card-sublabel">
+                        캐릭터 기준 이름표의 표시 위치와 띄울 간격을 설정합니다.
+                      </span>
                     </div>
 
                     <div className="dual-slider-box">
                       <div className="slider-row">
                         <span className="slider-label">위치:</span>
-                        <div className="button-toggle-group" style={{ flex: 1 }}>
+                        <div
+                          className="button-toggle-group"
+                          style={{ flex: 1 }}
+                        >
                           <button
                             type="button"
-                            className={`toggle-btn ${nameTagPosition === 'top' ? 'active' : ''}`}
-                            onClick={() => setNameTagPosition('top')}
+                            className={`toggle-btn ${nameTagPosition === "top" ? "active" : ""}`}
+                            onClick={() => setNameTagPosition("top")}
                           >
                             머리 위 (추천)
                           </button>
                           <button
                             type="button"
-                            className={`toggle-btn ${nameTagPosition === 'bottom' ? 'active' : ''}`}
-                            onClick={() => setNameTagPosition('bottom')}
+                            className={`toggle-btn ${nameTagPosition === "bottom" ? "active" : ""}`}
+                            onClick={() => setNameTagPosition("bottom")}
                           >
                             캐릭터 아래
                           </button>
                           <button
                             type="button"
-                            className={`toggle-btn ${nameTagPosition === 'hidden' ? 'active' : ''}`}
-                            onClick={() => setNameTagPosition('hidden')}
+                            className={`toggle-btn ${nameTagPosition === "hidden" ? "active" : ""}`}
+                            onClick={() => setNameTagPosition("hidden")}
                           >
                             숨김
                           </button>
@@ -471,7 +547,9 @@ export const SettingsView: React.FC = () => {
                           min={0}
                           max={16}
                           value={nameTagSpacing}
-                          onChange={(e) => setNameTagSpacing(Number(e.target.value))}
+                          onChange={(e) =>
+                            setNameTagSpacing(Number(e.target.value))
+                          }
                           className="mac-slider"
                         />
                         <span className="slider-val">{nameTagSpacing}px</span>
@@ -484,14 +562,17 @@ export const SettingsView: React.FC = () => {
               {/* ========================================================= */}
               {/* 2. 꾸미기 · 상점 탭 (말풍선 테마, 표시 설정 & 투척 아이템) */}
               {/* ========================================================= */}
-              {activeTab === 'shop' && (
+              {activeTab === "shop" && (
                 <div className="tab-section">
                   <div className="section-header">
                     <div className="section-title-row">
                       <Sparkles size={16} className="section-icon" />
                       <h2>꾸미기 · 상점</h2>
                     </div>
-                    <p className="section-desc">말풍선 테마와 표시 방식, 친구에게 던지는 투척 아이템을 커스터마이징합니다.</p>
+                    <p className="section-desc">
+                      말풍선 테마와 표시 방식, 친구에게 던지는 투척 아이템을
+                      커스터마이징합니다.
+                    </p>
                   </div>
 
                   {/* 독립 실시간 미리보기 팝업 유도 배너 */}
@@ -500,7 +581,10 @@ export const SettingsView: React.FC = () => {
                       <Eye size={15} className="banner-eye-icon" />
                       <div>
                         <span className="banner-title">실시간 미리보기 창</span>
-                        <span className="banner-desc">말풍선 테마, 지속시간/최대개수, 투척 모션을 독립 윈도우에서 테스트해보세요.</span>
+                        <span className="banner-desc">
+                          말풍선 테마, 지속시간/최대개수, 투척 모션을 독립
+                          윈도우에서 테스트해보세요.
+                        </span>
                       </div>
                     </div>
                     <button
@@ -516,7 +600,9 @@ export const SettingsView: React.FC = () => {
                   <div className="setting-card">
                     <div className="setting-card-header">
                       <label className="card-label">말풍선 테마</label>
-                      <span className="card-sublabel">보유한 말풍선을 고르면 모든 그룹에 바로 적용됩니다.</span>
+                      <span className="card-sublabel">
+                        보유한 말풍선을 고르면 모든 그룹에 바로 적용됩니다.
+                      </span>
                     </div>
 
                     <div className="custom-item-grid">
@@ -526,7 +612,7 @@ export const SettingsView: React.FC = () => {
                           <button
                             type="button"
                             key={theme.id}
-                            className={`custom-item-card ${isSelected ? 'selected' : ''}`}
+                            className={`custom-item-card ${isSelected ? "selected" : ""}`}
                             onClick={() => setBubbleTheme(theme.id)}
                           >
                             {isSelected && (
@@ -534,10 +620,16 @@ export const SettingsView: React.FC = () => {
                                 <Check size={11} strokeWidth={3} />
                               </div>
                             )}
-                            {theme.isPro && <span className="pro-badge">PRO</span>}
-                            {!theme.isPro && <span className="free-badge">FREE</span>}
+                            {theme.isPro && (
+                              <span className="pro-badge">PRO</span>
+                            )}
+                            {!theme.isPro && (
+                              <span className="free-badge">FREE</span>
+                            )}
 
-                            <div className={`bubble-theme-preview-pill theme-${theme.id}`}>
+                            <div
+                              className={`bubble-theme-preview-pill theme-${theme.id}`}
+                            >
                               <span>안녕하세요 ✨</span>
                             </div>
                             <span className="item-title">{theme.label}</span>
@@ -551,18 +643,24 @@ export const SettingsView: React.FC = () => {
                   <div className="setting-card">
                     <div className="setting-card-header">
                       <label className="card-label">말풍선 표시 설정</label>
-                      <span className="card-sublabel">말풍선의 화면 지속 시간과 동시에 쌓이는 최대 개수를 조절합니다.</span>
+                      <span className="card-sublabel">
+                        말풍선의 화면 지속 시간과 동시에 쌓이는 최대 개수를
+                        조절합니다.
+                      </span>
                     </div>
 
                     <div className="dual-slider-box">
                       <div className="slider-row">
                         <span className="slider-label">지속 시간:</span>
-                        <div className="button-toggle-group" style={{ flex: 1 }}>
+                        <div
+                          className="button-toggle-group"
+                          style={{ flex: 1 }}
+                        >
                           {[3, 6, 10, 15].map((sec) => (
                             <button
                               key={sec}
                               type="button"
-                              className={`toggle-btn ${bubbleDurationSec === sec ? 'active' : ''}`}
+                              className={`toggle-btn ${bubbleDurationSec === sec ? "active" : ""}`}
                               onClick={() => setBubbleDurationSec(sec)}
                             >
                               {sec}초
@@ -573,12 +671,15 @@ export const SettingsView: React.FC = () => {
 
                       <div className="slider-row">
                         <span className="slider-label">최대 개수:</span>
-                        <div className="button-toggle-group" style={{ flex: 1 }}>
+                        <div
+                          className="button-toggle-group"
+                          style={{ flex: 1 }}
+                        >
                           {[1, 2, 3, 4].map((count) => (
                             <button
                               key={count}
                               type="button"
-                              className={`toggle-btn ${maxBubbleCount === count ? 'active' : ''}`}
+                              className={`toggle-btn ${maxBubbleCount === count ? "active" : ""}`}
                               onClick={() => setMaxBubbleCount(count)}
                             >
                               {count}개
@@ -592,8 +693,12 @@ export const SettingsView: React.FC = () => {
                   {/* 3. 투척 아이템 / 폭탄 테마 카드 */}
                   <div className="setting-card">
                     <div className="setting-card-header">
-                      <label className="card-label">투척 아이템 (상호작용)</label>
-                      <span className="card-sublabel">상대방 펫을 클릭했을 때 던지는 오브젝트를 선택합니다.</span>
+                      <label className="card-label">
+                        투척 아이템 (상호작용)
+                      </label>
+                      <span className="card-sublabel">
+                        상대방 펫을 클릭했을 때 던지는 오브젝트를 선택합니다.
+                      </span>
                     </div>
 
                     <div className="custom-item-grid">
@@ -603,7 +708,7 @@ export const SettingsView: React.FC = () => {
                           <button
                             type="button"
                             key={item.id}
-                            className={`custom-item-card ${isSelected ? 'selected' : ''}`}
+                            className={`custom-item-card ${isSelected ? "selected" : ""}`}
                             onClick={() => setThrowItem(item.id)}
                           >
                             {isSelected && (
@@ -611,8 +716,12 @@ export const SettingsView: React.FC = () => {
                                 <Check size={11} strokeWidth={3} />
                               </div>
                             )}
-                            {item.isPro && <span className="pro-badge">PRO</span>}
-                            {!item.isPro && <span className="free-badge">FREE</span>}
+                            {item.isPro && (
+                              <span className="pro-badge">PRO</span>
+                            )}
+                            {!item.isPro && (
+                              <span className="free-badge">FREE</span>
+                            )}
 
                             <div className="throw-item-emoji-box">
                               <span className="throw-emoji">{item.emoji}</span>
@@ -629,75 +738,84 @@ export const SettingsView: React.FC = () => {
               {/* ========================================================= */}
               {/* 3. 그룹 (세션 관리) 탭 - 수평 1행 통일 (피드백 반영) */}
               {/* ========================================================= */}
-              {activeTab === 'group' && (
+              {activeTab === "group" && (
                 <div className="tab-section">
                   <div className="section-header">
                     <div className="section-title-row">
                       <Users size={16} className="section-icon" />
                       <h2>그룹 (아지트)</h2>
                     </div>
-                    <p className="section-desc">친구들과 모여 함께 화면 바닥에서 산책할 아지트 방을 관리합니다.</p>
+                    <p className="section-desc">
+                      친구들과 모여 함께 화면 바닥에서 산책할 아지트 방을
+                      관리합니다.
+                    </p>
                   </div>
 
                   {/* 1. 현재 방 코드 */}
-                  <div className="setting-card">
-                    <div className="setting-card-row">
-                      <div className="setting-label-col">
-                        <label className="card-label">현재 아지트 코드</label>
-                        <span className="card-sublabel">이 코드를 복사해 친구들에게 공유하세요.</span>
-                      </div>
-                      <div className="room-code-badge-group">
-                        <span className="room-code-display">{roomId}</span>
-                        <button type="button" className="btn-copy-code" onClick={handleCopyCode}>
-                          {copied ? '복사됨!' : '코드 복사'}
-                        </button>
-                      </div>
+                  <div className="setting-card azit-card">
+                    <label className="card-label">현재 아지트 코드</label>
+                    <div className="card-desc-action-row">
+                      <span className="card-sublabel">
+                        이 코드를 복사해 친구들에게 공유하세요.
+                      </span>
+                      <button
+                        type="button"
+                        className="btn-copy-code"
+                        onClick={handleCopyCode}
+                      >
+                        {copied ? "복사됨!" : "코드 복사"}
+                      </button>
                     </div>
+                    <div className="room-code-display full-width">{roomId}</div>
                   </div>
 
-                  {/* 2. 새 아지트 만들기 (수평 1행 통일) */}
-                  <div className="setting-card">
-                    <div className="setting-card-row">
-                      <div className="setting-label-col">
-                        <label className="card-label">새로운 아지트 만들기</label>
-                        <span className="card-sublabel">새로운 방 코드를 생성하여 나만의 방을 만듭니다.</span>
-                      </div>
-                      <div className="input-with-button-row">
-                        <input
-                          type="text"
-                          className="mac-text-input"
-                          placeholder="방 이름 (예: 개발팀 아지트)"
-                          value={newRoomNameInput}
-                          onChange={(e) => setNewRoomNameInput(e.target.value)}
-                        />
-                        <button type="button" className="mac-action-btn primary" onClick={handleCreateNewRoom}>
-                          <Plus size={13} /> 새로 만들기
-                        </button>
-                      </div>
+                  {/* 2. 새 아지트 만들기 */}
+                  <div className="setting-card azit-card">
+                    <label className="card-label">새로운 아지트 만들기</label>
+                    <div className="card-desc-action-row">
+                      <span className="card-sublabel">
+                        새로운 방 코드를 생성하여 나만의 방을 만듭니다.
+                      </span>
+                      <button
+                        type="button"
+                        className="mac-action-btn primary"
+                        onClick={handleCreateNewRoom}
+                      >
+                        <Plus size={13} /> 새로 만들기
+                      </button>
                     </div>
+                    <input
+                      type="text"
+                      className="mac-text-input full-width"
+                      placeholder="방 이름 (예: 개발팀 아지트)"
+                      value={newRoomNameInput}
+                      onChange={(e) => setNewRoomNameInput(e.target.value)}
+                    />
                   </div>
 
-                  {/* 3. 코드로 참여 (수평 1행 통일) */}
-                  <div className="setting-card">
-                    <div className="setting-card-row">
-                      <div className="setting-label-col">
-                        <label className="card-label">코드로 아지트 참여</label>
-                        <span className="card-sublabel">친구가 알려준 방 코드를 입력하여 입장합니다.</span>
-                      </div>
-                      <div className="input-with-button-row">
-                        <input
-                          type="text"
-                          className="mac-text-input code-input"
-                          placeholder="방 코드 6자리"
-                          value={joinCodeInput}
-                          onChange={(e) => setJoinCodeInput(e.target.value)}
-                          maxLength={12}
-                        />
-                        <button type="button" className="mac-action-btn" onClick={handleJoinWithCode}>
-                          <Compass size={13} /> 참여하기
-                        </button>
-                      </div>
+                  {/* 3. 코드로 참여 */}
+                  <div className="setting-card azit-card">
+                    <label className="card-label">코드로 아지트 참여</label>
+                    <div className="card-desc-action-row">
+                      <span className="card-sublabel">
+                        친구가 알려준 방 코드를 입력하여 입장합니다.
+                      </span>
+                      <button
+                        type="button"
+                        className="mac-action-btn"
+                        onClick={handleJoinWithCode}
+                      >
+                        <Compass size={13} /> 참여하기
+                      </button>
                     </div>
+                    <input
+                      type="text"
+                      className="mac-text-input code-input full-width"
+                      placeholder="방 코드 23자리"
+                      value={joinCodeInput}
+                      onChange={(e) => setJoinCodeInput(e.target.value)}
+                      maxLength={12}
+                    />
                   </div>
                 </div>
               )}
@@ -705,14 +823,17 @@ export const SettingsView: React.FC = () => {
               {/* ========================================================= */}
               {/* 4. 앱 설정 탭 */}
               {/* ========================================================= */}
-              {activeTab === 'settings' && (
+              {activeTab === "settings" && (
                 <div className="tab-section">
                   <div className="section-header">
                     <div className="section-title-row">
                       <SettingsIcon size={16} className="section-icon" />
                       <h2>앱 설정</h2>
                     </div>
-                    <p className="section-desc">모니터 디스플레이 및 실제 화면 산책 영역을 정밀하게 설정합니다.</p>
+                    <p className="section-desc">
+                      모니터 디스플레이 및 실제 화면 산책 영역을 정밀하게
+                      설정합니다.
+                    </p>
                   </div>
 
                   {/* 모니터 선택 */}
@@ -722,12 +843,15 @@ export const SettingsView: React.FC = () => {
                         <label className="card-label" htmlFor="disp-select">
                           <Monitor size={13} /> 나타날 모니터
                         </label>
-                        <span className="card-sublabel">선택한 모니터 화면 바닥으로 캐릭터와 메시지 입력창이 즉시 이동합니다.</span>
+                        <span className="card-sublabel">
+                          선택한 모니터 화면 바닥으로 캐릭터와 메시지 입력창이
+                          즉시 이동합니다.
+                        </span>
                       </div>
                       <select
                         id="disp-select"
                         className="mac-select-input"
-                        value={selectedDisplayId || ''}
+                        value={selectedDisplayId || ""}
                         onChange={(e) => {
                           const id = Number(e.target.value);
                           setSelectedDisplayId(id);
@@ -739,7 +863,9 @@ export const SettingsView: React.FC = () => {
                             {disp.label}
                           </option>
                         ))}
-                        {displays.length === 0 && <option value="">기본 주 모니터</option>}
+                        {displays.length === 0 && (
+                          <option value="">기본 주 모니터</option>
+                        )}
                       </select>
                     </div>
                   </div>
@@ -749,11 +875,17 @@ export const SettingsView: React.FC = () => {
                     <div className="setting-card-header">
                       <div className="card-header-flex">
                         <label className="card-label">
-                          <MoveHorizontal size={13} /> 산책 가로 구간 ({walkingArea.minPercent}% ~ {walkingArea.maxPercent}%)
+                          <MoveHorizontal size={13} /> 산책 가로 구간 (
+                          {walkingArea.minPercent}% ~ {walkingArea.maxPercent}%)
                         </label>
-                        <span className="active-beam-badge">실제 화면 네온 빔 투사 중</span>
+                        <span className="active-beam-badge">
+                          실제 화면 네온 빔 투사 중
+                        </span>
                       </div>
-                      <span className="card-sublabel">슬라이더를 움직이면 실제 PC 모니터 바닥의 빔 너비가 실시간으로 연동됩니다.</span>
+                      <span className="card-sublabel">
+                        슬라이더를 움직이면 실제 PC 모니터 바닥의 빔 너비가
+                        실시간으로 연동됩니다.
+                      </span>
                     </div>
 
                     <div className="dual-slider-box">
@@ -764,10 +896,17 @@ export const SettingsView: React.FC = () => {
                           min={0}
                           max={Math.max(0, walkingArea.maxPercent - 10)}
                           value={walkingArea.minPercent}
-                          onChange={(e) => setWalkingArea({ ...walkingArea, minPercent: Number(e.target.value) })}
+                          onChange={(e) =>
+                            setWalkingArea({
+                              ...walkingArea,
+                              minPercent: Number(e.target.value),
+                            })
+                          }
                           className="mac-slider"
                         />
-                        <span className="slider-val">{walkingArea.minPercent}%</span>
+                        <span className="slider-val">
+                          {walkingArea.minPercent}%
+                        </span>
                       </div>
                       <div className="slider-row">
                         <span className="slider-label">종료 위치:</span>
@@ -776,10 +915,17 @@ export const SettingsView: React.FC = () => {
                           min={Math.min(100, walkingArea.minPercent + 10)}
                           max={100}
                           value={walkingArea.maxPercent}
-                          onChange={(e) => setWalkingArea({ ...walkingArea, maxPercent: Number(e.target.value) })}
+                          onChange={(e) =>
+                            setWalkingArea({
+                              ...walkingArea,
+                              maxPercent: Number(e.target.value),
+                            })
+                          }
                           className="mac-slider"
                         />
-                        <span className="slider-val">{walkingArea.maxPercent}%</span>
+                        <span className="slider-val">
+                          {walkingArea.maxPercent}%
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -789,12 +935,17 @@ export const SettingsView: React.FC = () => {
                     <div className="setting-card-row">
                       <div className="setting-label-col">
                         <label className="card-label">최근 3일 대화 기록</label>
-                        <span className="card-sublabel">별도의 독립 메신저 창을 열어 지난 대화 타임라인을 확인합니다.</span>
+                        <span className="card-sublabel">
+                          별도의 독립 메신저 창을 열어 지난 대화 타임라인을
+                          확인합니다.
+                        </span>
                       </div>
                       <button
                         type="button"
                         className="mac-action-btn"
-                        onClick={() => window.electronAPI?.openHistoryWindow?.()}
+                        onClick={() =>
+                          window.electronAPI?.openHistoryWindow?.()
+                        }
                       >
                         <MessageSquareText size={13} /> 기록 창 열기
                       </button>
@@ -809,18 +960,28 @@ export const SettingsView: React.FC = () => {
                           <label className="card-label">
                             <Bot size={13} /> 시뮬레이션 봇 ({bots.length}개)
                           </label>
-                          <button type="button" className="mac-action-btn small primary" onClick={handleAddBot}>
+                          <button
+                            type="button"
+                            className="mac-action-btn small primary"
+                            onClick={handleAddBot}
+                          >
                             <Plus size={11} /> 봇 추가
                           </button>
                         </div>
-                        <span className="card-sublabel">로컬에서 채팅을 시뮬레이션할 봇을 추가합니다.</span>
+                        <span className="card-sublabel">
+                          로컬에서 채팅을 시뮬레이션할 봇을 추가합니다.
+                        </span>
                       </div>
 
                       <div className="bot-cards-container">
                         {bots.map((bot) => (
                           <div key={bot.id} className="bot-inline-item">
                             <div className="bot-inline-left">
-                              <PixelCharacter type={bot.avatar} status="online" size={28} />
+                              <PixelCharacter
+                                type={bot.avatar}
+                                status="online"
+                                size={28}
+                              />
                               <span className="bot-name">{bot.name}</span>
                             </div>
                             <button
@@ -835,41 +996,25 @@ export const SettingsView: React.FC = () => {
                       </div>
                     </div>
                   )}
-
-                  {/* DEV 서버 URL */}
-                  {import.meta.env.DEV && (
-                    <div className="setting-card">
-                      <div className="setting-card-row">
-                        <div className="setting-label-col">
-                          <label className="card-label" htmlFor="server-url-field">
-                            <Server size={13} /> 중계 서버 URL
-                          </label>
-                          <span className="card-sublabel">로컬 테스트: http://localhost:3001</span>
-                        </div>
-                        <input
-                          id="server-url-field"
-                          type="text"
-                          className="mac-text-input"
-                          value={serverUrl}
-                          onChange={(e) => setServerUrl(e.target.value)}
-                        />
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
             </div>
 
             {/* 하단 고정 액션 바 */}
             <div className="mac-settings-footer">
-              <button type="button" className="mac-footer-btn cancel" onClick={handleClose}>
+              <button
+                type="button"
+                className="mac-footer-btn cancel"
+                onClick={handleClose}
+              >
                 닫기
               </button>
               <button
                 type="submit"
-                className={`mac-footer-btn save ${savedFeedback ? 'saved-success' : ''}`}
+                className={`mac-footer-btn save ${savedFeedback ? "saved-success" : ""}`}
               >
-                <Check size={14} /> {savedFeedback ? '저장 및 적용됨!' : '저장하고 적용하기'}
+                <Check size={14} />{" "}
+                {savedFeedback ? "저장 및 적용됨!" : "저장하고 적용하기"}
               </button>
             </div>
           </form>

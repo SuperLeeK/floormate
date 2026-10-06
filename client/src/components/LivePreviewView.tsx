@@ -339,7 +339,7 @@ export const LivePreviewView: React.FC = () => {
           {/* 봇 캐릭터 스프라이트 (피격 시 shake) */}
           <div className={`stage-sprite-box ${botHit ? 'is-bot-hit-shake' : ''}`}>
             <PixelCharacter
-              type="bear"
+              type="dog"
               status="online"
               isWalking={false}
               facingDirection="left"
