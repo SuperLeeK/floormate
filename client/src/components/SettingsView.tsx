@@ -52,6 +52,8 @@ const THROW_ITEMS: {
   { id: "waterball", label: "물풍선", emoji: "🎈", isPro: true },
 ];
 
+const PERMANENT_SERVER_URL = "https://floormate.hoeng.site";
+
 function getSavedSettings(): AppSettings {
   try {
     const saved = localStorage.getItem("dopamine_sidey_settings");
@@ -63,17 +65,20 @@ function getSavedSettings(): AppSettings {
       ) {
         parsed.userAvatar = "cat";
       }
+      if (!parsed.serverUrl || parsed.serverUrl.includes('localhost') || parsed.serverUrl.includes('trycloudflare.com')) {
+        parsed.serverUrl = PERMANENT_SERVER_URL;
+      }
       return parsed;
     }
   } catch {
     // fallback
   }
   return {
-    serverUrl: "http://localhost:3001",
+    serverUrl: PERMANENT_SERVER_URL,
     roomId: "floor-main",
     roomName: "내 방",
     userId: `user_${Math.random().toString(36).substr(2, 6)}`,
-    userName: "마먼",
+    userName: "친구",
     userAvatar: "cat",
     dockSide: "right",
     soundEnabled: true,
@@ -216,17 +221,47 @@ export const SettingsView: React.FC = () => {
     }
   };
 
+  const saveAndNotify = (newSettings: AppSettings) => {
+    localStorage.setItem("dopamine_sidey_settings", JSON.stringify(newSettings));
+    localStorage.setItem("dopamine_settings", JSON.stringify(newSettings));
+    window.electronAPI?.saveSettings(newSettings);
+    setSavedFeedback(true);
+    setTimeout(() => {
+      setSavedFeedback(false);
+    }, 2000);
+  };
+
   const handleCreateNewRoom = () => {
     const newCode = generateRoomCode();
     const finalName = newRoomNameInput.trim() || "새로운 아지트";
     setRoomId(newCode);
     setRoomName(finalName);
-    const updated = [
+    const updatedRooms = [
       { code: newCode, name: finalName },
       ...recentRooms.filter((r) => r.code !== newCode),
     ].slice(0, 6);
-    setRecentRooms(updated);
+    setRecentRooms(updatedRooms);
     setNewRoomNameInput("");
+
+    const updated: AppSettings = {
+      ...settings,
+      userName: userName.trim() || "친구",
+      userAvatar,
+      bubbleTheme,
+      throwItem,
+      roomId: newCode,
+      roomName: finalName,
+      recentRooms: updatedRooms,
+      selectedDisplayId,
+      walkingArea,
+      nameTagPosition,
+      nameTagSpacing,
+      maxBubbleCount,
+      bubbleDurationSec,
+      bots,
+      serverUrl: PERMANENT_SERVER_URL,
+    };
+    saveAndNotify(updated);
   };
 
   const handleJoinWithCode = () => {
@@ -235,13 +270,33 @@ export const SettingsView: React.FC = () => {
     const finalName = joinNameInput.trim() || "친구 방";
     setRoomId(formatted);
     setRoomName(finalName);
-    const updated = [
+    const updatedRooms = [
       { code: formatted, name: finalName },
       ...recentRooms.filter((r) => r.code !== formatted),
     ].slice(0, 6);
-    setRecentRooms(updated);
+    setRecentRooms(updatedRooms);
     setJoinCodeInput("");
     setJoinNameInput("");
+
+    const updated: AppSettings = {
+      ...settings,
+      userName: userName.trim() || "친구",
+      userAvatar,
+      bubbleTheme,
+      throwItem,
+      roomId: formatted,
+      roomName: finalName,
+      recentRooms: updatedRooms,
+      selectedDisplayId,
+      walkingArea,
+      nameTagPosition,
+      nameTagSpacing,
+      maxBubbleCount,
+      bubbleDurationSec,
+      bots,
+      serverUrl: PERMANENT_SERVER_URL,
+    };
+    saveAndNotify(updated);
   };
 
   const handleAddBot = () => {
@@ -285,18 +340,10 @@ export const SettingsView: React.FC = () => {
       maxBubbleCount,
       bubbleDurationSec,
       bots,
-      serverUrl: settings.serverUrl,
+      serverUrl: PERMANENT_SERVER_URL,
     };
 
-    localStorage.setItem("dopamine_sidey_settings", JSON.stringify(updated));
-    localStorage.setItem("dopamine_settings", JSON.stringify(updated));
-    window.electronAPI?.saveSettings(updated);
-
-    // 저장 및 적용 시 창을 닫지 않고 피드백만 표시!
-    setSavedFeedback(true);
-    setTimeout(() => {
-      setSavedFeedback(false);
-    }, 2000);
+    saveAndNotify(updated);
   };
 
   return (

@@ -474,6 +474,15 @@ export const App: React.FC = () => {
       setSettings(newSettings);
       localStorage.setItem('dopamine_sidey_settings', JSON.stringify(newSettings));
 
+      // 내 아바타 / 이름 변경 시 화면에 즉시 반영
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === newSettings.userId
+            ? { ...u, name: newSettings.userName, avatar: newSettings.userAvatar }
+            : u
+        )
+      );
+
       if (isConnectionChanged) {
         connectSocket(newSettings, status);
       } else {

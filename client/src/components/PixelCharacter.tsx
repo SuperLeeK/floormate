@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { CharacterType, UserStatus } from '../types';
 import { CHARACTER_THEMES } from '../constants';
 
@@ -30,6 +30,11 @@ export const PixelCharacter: React.FC<PixelCharacterProps> = ({
 
   // 시도할 이미지 단계: 0: .png, 1: .webp, 2: cat fallback
   const [retryStep, setRetryStep] = useState<number>(0);
+
+  // 캐릭터 타입이 바뀌면 이미지 로드 시도 단계를 즉시 0으로 초기화
+  useEffect(() => {
+    setRetryStep(0);
+  }, [safeType]);
 
   const theme = useMemo(() => {
     return CHARACTER_THEMES[safeType] || CHARACTER_THEMES.cat;
