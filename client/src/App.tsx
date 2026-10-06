@@ -14,7 +14,7 @@ import {
 import { PixelCharacter } from './components/PixelCharacter';
 import { SpeechBubble, BubbleMessageItem } from './components/SpeechBubble';
 import { generateRoomCode } from './components/SettingsView';
-import { CHARACTER_THEMES } from './constants';
+import { CHARACTER_THEMES, DEFAULT_SHORTCUTS } from './constants';
 import './App.css';
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -32,6 +32,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   nameTagSpacing: 4,
   walkingArea: { minPercent: 0, maxPercent: 100 },
   recentRooms: [],
+  shortcuts: DEFAULT_SHORTCUTS,
   bots: [
     {
       id: 'bot_dev_1',

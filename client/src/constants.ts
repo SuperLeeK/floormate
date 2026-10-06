@@ -82,3 +82,11 @@ export const CHARACTERS: { type: CharacterType; label: string }[] = CHARACTER_LI
 }));
 
 export const DEFAULT_CHARACTER: CharacterType = 'cat';
+
+export const DEFAULT_SHORTCUTS = {
+  chatInput: typeof navigator !== 'undefined' && navigator.userAgent.includes('Mac')
+    ? 'Control+Alt+Command+P'
+    : 'Control+Alt+Shift+P',
+  chatHistory: '',
+  settings: '',
+};

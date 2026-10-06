@@ -81,6 +81,12 @@ export interface BotConfig {
   enabled: boolean;
 }
 
+export interface AppShortcuts {
+  chatInput: string; // 채팅 입력창 열기 (Windows: Control+Alt+Shift+P, Mac: Control+Alt+Command+P)
+  chatHistory: string; // 3일 대화 기록창 열기 (기본값: 없음)
+  settings: string; // 설정창 열기 (기본값: 없음)
+}
+
 export interface AppSettings {
   serverUrl: string;
   roomId: string;
@@ -100,6 +106,7 @@ export interface AppSettings {
   bots?: BotConfig[];
   bubbleTheme?: BubbleTheme; // 기본 말풍선, 네온 다크, 레트로 픽셀, 사이버 핑크
   throwItem?: ThrowItemType; // 기본 폭탄 💣, 돌멩이 🪨, 하트 💖, 번개 ⚡ 등
+  shortcuts?: AppShortcuts; // 사용자 정의 전역 단축키
 }
 
 declare global {

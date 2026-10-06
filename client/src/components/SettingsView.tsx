@@ -25,6 +25,7 @@ import {
   MessageSquareText,
   Sidebar,
   Eye,
+  Keyboard,
 } from "lucide-react";
 import { CHARACTERS } from "../constants";
 import "./SettingsView.css";
@@ -102,7 +103,36 @@ export function generateRoomCode(): string {
   return result;
 }
 
-type SidebarTab = "profile" | "group" | "shop" | "settings";
+function formatKeyCombination(e: React.KeyboardEvent): string | null {
+  const isMac = typeof navigator !== "undefined" && navigator.userAgent.includes("Mac");
+  const parts: string[] = [];
+
+  if (e.ctrlKey) parts.push("Control");
+  if (e.altKey) parts.push("Alt");
+  if (e.shiftKey) parts.push("Shift");
+  if (e.metaKey) parts.push(isMac ? "Command" : "Super");
+
+  let key = e.key;
+  if (["Control", "Alt", "Shift", "Meta"].includes(key)) {
+    return null;
+  }
+
+  if (key === " ") key = "Space";
+  else if (key.length === 1) key = key.toUpperCase();
+
+  parts.push(key);
+  return parts.join("+");
+}
+
+function displayShortcut(shortcut: string): string {
+  if (!shortcut || !shortcut.trim()) return "미지정 (클릭하여 키 입력)";
+  return shortcut
+    .replace(/Control/g, "Ctrl")
+    .replace(/Command/g, "Cmd")
+    .replace(/\+/g, " + ");
+}
+
+type SidebarTab = "profile" | "group" | "shortcuts" | "shop" | "settings";
 
 export const SettingsView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<SidebarTab>("profile");
@@ -145,7 +175,48 @@ export const SettingsView: React.FC = () => {
   const [joinNameInput, setJoinNameInput] = useState("");
   const [copied, setCopied] = useState(false);
 
-  // 4. 앱 설정
+  // 4. 단축키 설정
+  const isMac = typeof navigator !== "undefined" && navigator.userAgent.includes("Mac");
+  const defaultChatKey = isMac ? "Control+Alt+Command+P" : "Control+Alt+Shift+P";
+  const [chatInputShortcut, setChatInputShortcut] = useState<string>(
+    settings.shortcuts?.chatInput ?? defaultChatKey
+  );
+  const [chatHistoryShortcut, setChatHistoryShortcut] = useState<string>(
+    settings.shortcuts?.chatHistory ?? ""
+  );
+  const [settingsShortcut, setSettingsShortcut] = useState<string>(
+    settings.shortcuts?.settings ?? ""
+  );
+  const [recordingTarget, setRecordingTarget] = useState<
+    "chatInput" | "chatHistory" | "settings" | null
+  >(null);
+
+  const handleShortcutKeyDown = (
+    e: React.KeyboardEvent,
+    target: "chatInput" | "chatHistory" | "settings"
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Escape 또는 Backspace는 단축키 해제(초기화)
+    if (e.key === "Escape" || e.key === "Backspace") {
+      if (target === "chatInput") setChatInputShortcut(defaultChatKey);
+      else if (target === "chatHistory") setChatHistoryShortcut("");
+      else if (target === "settings") setSettingsShortcut("");
+      setRecordingTarget(null);
+      return;
+    }
+
+    const combination = formatKeyCombination(e);
+    if (combination) {
+      if (target === "chatInput") setChatInputShortcut(combination);
+      else if (target === "chatHistory") setChatHistoryShortcut(combination);
+      else if (target === "settings") setSettingsShortcut(combination);
+      setRecordingTarget(null);
+    }
+  };
+
+  // 5. 앱 설정
   const [displays, setDisplays] = useState<DisplayInfo[]>([]);
   const [selectedDisplayId, setSelectedDisplayId] = useState<
     number | undefined
@@ -260,6 +331,11 @@ export const SettingsView: React.FC = () => {
       bubbleDurationSec,
       bots,
       serverUrl: PERMANENT_SERVER_URL,
+      shortcuts: {
+        chatInput: chatInputShortcut,
+        chatHistory: chatHistoryShortcut,
+        settings: settingsShortcut,
+      },
     };
     saveAndNotify(updated);
   };
@@ -295,6 +371,11 @@ export const SettingsView: React.FC = () => {
       bubbleDurationSec,
       bots,
       serverUrl: PERMANENT_SERVER_URL,
+      shortcuts: {
+        chatInput: chatInputShortcut,
+        chatHistory: chatHistoryShortcut,
+        settings: settingsShortcut,
+      },
     };
     saveAndNotify(updated);
   };
@@ -341,6 +422,11 @@ export const SettingsView: React.FC = () => {
       bubbleDurationSec,
       bots,
       serverUrl: PERMANENT_SERVER_URL,
+      shortcuts: {
+        chatInput: chatInputShortcut,
+        chatHistory: chatHistoryShortcut,
+        settings: settingsShortcut,
+      },
     };
 
     saveAndNotify(updated);
@@ -410,6 +496,14 @@ export const SettingsView: React.FC = () => {
               >
                 <Users size={15} />
                 <span>그룹</span>
+              </button>
+              <button
+                type="button"
+                className={`sidebar-nav-item ${activeTab === "shortcuts" ? "active" : ""}`}
+                onClick={() => setActiveTab("shortcuts")}
+              >
+                <Keyboard size={15} />
+                <span>단축키 설정</span>
               </button>
               <button
                 type="button"
@@ -863,6 +957,134 @@ export const SettingsView: React.FC = () => {
                       onChange={(e) => setJoinCodeInput(e.target.value)}
                       maxLength={40}
                     />
+                  </div>
+                </div>
+              )}
+
+              {/* ========================================================= */}
+              {/* 3. 단축키 설정 탭 */}
+              {/* ========================================================= */}
+              {activeTab === "shortcuts" && (
+                <div className="tab-section">
+                  <div className="section-header">
+                    <div className="section-title-row">
+                      <Keyboard size={16} className="section-icon" />
+                      <h2>단축키 설정</h2>
+                    </div>
+                    <p className="section-desc">
+                      자주 사용하는 말풍선 입력과 보조 창을 전역 단축키로 빠르게 띄웁니다.
+                    </p>
+                  </div>
+
+                  {/* 1. 말풍선 입력 단축키 */}
+                  <div className="setting-card">
+                    <div className="setting-card-row">
+                      <div className="setting-label-col">
+                        <label className="card-label">말풍선 채팅 입력창</label>
+                        <span className="card-sublabel">
+                          화면 상단에 말풍선 입력 바를 호출합니다. (기본: {isMac ? 'Ctrl+Alt+Cmd+P' : 'Ctrl+Alt+Shift+P'})
+                        </span>
+                      </div>
+                      <div className="shortcut-recorder-box">
+                        <button
+                          type="button"
+                          className={`shortcut-key-badge ${recordingTarget === 'chatInput' ? 'recording' : ''}`}
+                          onClick={() => setRecordingTarget('chatInput')}
+                          onKeyDown={(e) => handleShortcutKeyDown(e, 'chatInput')}
+                        >
+                          {recordingTarget === 'chatInput' ? '키 조합 누르는 중...' : displayShortcut(chatInputShortcut)}
+                        </button>
+                        <button
+                          type="button"
+                          className="shortcut-reset-btn"
+                          onClick={() => {
+                            setChatInputShortcut(defaultChatKey);
+                            setRecordingTarget(null);
+                          }}
+                          title="기본값으로 복원"
+                        >
+                          기본값
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 2. 3일 대화 기록창 단축키 */}
+                  <div className="setting-card">
+                    <div className="setting-card-row">
+                      <div className="setting-label-col">
+                        <label className="card-label">최근 3일 대화 기록창</label>
+                        <span className="card-sublabel">
+                          친구들과 주고받은 최근 대화 목록 팝업 창을 엽니다. (기본값: 미설정)
+                        </span>
+                      </div>
+                      <div className="shortcut-recorder-box">
+                        <button
+                          type="button"
+                          className={`shortcut-key-badge ${recordingTarget === 'chatHistory' ? 'recording' : ''}`}
+                          onClick={() => setRecordingTarget('chatHistory')}
+                          onKeyDown={(e) => handleShortcutKeyDown(e, 'chatHistory')}
+                        >
+                          {recordingTarget === 'chatHistory' ? '키 조합 누르는 중...' : displayShortcut(chatHistoryShortcut)}
+                        </button>
+                        {chatHistoryShortcut ? (
+                          <button
+                            type="button"
+                            className="shortcut-reset-btn"
+                            onClick={() => {
+                              setChatHistoryShortcut('');
+                              setRecordingTarget(null);
+                            }}
+                            title="단축키 해제"
+                          >
+                            해제
+                          </button>
+                        ) : (
+                          <span className="shortcut-hint-badge">미설정</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 3. 환경 설정창 단축키 */}
+                  <div className="setting-card">
+                    <div className="setting-card-row">
+                      <div className="setting-label-col">
+                        <label className="card-label">FloorMate 환경 설정창</label>
+                        <span className="card-sublabel">
+                          이 설정 창을 언제 어디서나 전역 단축키로 바로 엽니다. (기본값: 미설정)
+                        </span>
+                      </div>
+                      <div className="shortcut-recorder-box">
+                        <button
+                          type="button"
+                          className={`shortcut-key-badge ${recordingTarget === 'settings' ? 'recording' : ''}`}
+                          onClick={() => setRecordingTarget('settings')}
+                          onKeyDown={(e) => handleShortcutKeyDown(e, 'settings')}
+                        >
+                          {recordingTarget === 'settings' ? '키 조합 누르는 중...' : displayShortcut(settingsShortcut)}
+                        </button>
+                        {settingsShortcut ? (
+                          <button
+                            type="button"
+                            className="shortcut-reset-btn"
+                            onClick={() => {
+                              setSettingsShortcut('');
+                              setRecordingTarget(null);
+                            }}
+                            title="단축키 해제"
+                          >
+                            해제
+                          </button>
+                        ) : (
+                          <span className="shortcut-hint-badge">미설정</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="shortcut-guide-hint">
+                    💡 <strong>단축키 변경 팁</strong>: 버튼을 클릭한 상태에서 원하는 키보드 조합(예: Ctrl + Alt + H 등)을 누르면 즉시 감지되어 변경됩니다. Backspace 또는 Esc 키를 누르면 단축키가 해제됩니다.
                   </div>
                 </div>
               )}

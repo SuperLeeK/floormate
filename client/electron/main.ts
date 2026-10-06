@@ -55,6 +55,115 @@ function saveDisplayId(displayId: number) {
   }
 }
 
+interface AppShortcutsConfig {
+  chatInput?: string;
+  chatHistory?: string;
+  settings?: string;
+}
+
+function getDefaultShortcuts(): AppShortcutsConfig {
+  return {
+    chatInput: process.platform === 'darwin' ? 'Control+Alt+Command+P' : 'Control+Alt+Shift+P',
+    chatHistory: '',
+    settings: ''
+  };
+}
+
+function loadSavedShortcuts(): AppShortcutsConfig {
+  const defaults = getDefaultShortcuts();
+  try {
+    const filePath = getSettingsFilePath();
+    if (fs.existsSync(filePath)) {
+      const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+      if (data && data.shortcuts) {
+        return {
+          chatInput: typeof data.shortcuts.chatInput === 'string' ? data.shortcuts.chatInput : defaults.chatInput,
+          chatHistory: typeof data.shortcuts.chatHistory === 'string' ? data.shortcuts.chatHistory : '',
+          settings: typeof data.shortcuts.settings === 'string' ? data.shortcuts.settings : ''
+        };
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load saved shortcuts in main:', err);
+  }
+  return defaults;
+}
+
+function saveShortcutsToSettings(shortcuts: AppShortcutsConfig) {
+  try {
+    const filePath = getSettingsFilePath();
+    let existing: any = {};
+    if (fs.existsSync(filePath)) {
+      try {
+        existing = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+      } catch {}
+    }
+    existing.shortcuts = shortcuts;
+    fs.writeFileSync(filePath, JSON.stringify(existing, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Failed to save shortcuts in main:', err);
+  }
+}
+
+function registerAppShortcuts(shortcuts?: AppShortcutsConfig) {
+  globalShortcut.unregisterAll();
+
+  const finalShortcuts = shortcuts || loadSavedShortcuts();
+
+  // 1. 말풍선 채팅 입력창 (기본값 존재)
+  const chatKey = finalShortcuts.chatInput || (process.platform === 'darwin' ? 'Control+Alt+Command+P' : 'Control+Alt+Shift+P');
+  if (chatKey && chatKey.trim()) {
+    try {
+      const ok = globalShortcut.register(chatKey.trim(), () => {
+        openChatInput();
+      });
+      if (!ok) {
+        console.warn('Failed to register chatInput shortcut:', chatKey);
+      }
+    } catch (e) {
+      console.warn('Error registering chatInput shortcut:', chatKey, e);
+    }
+  }
+
+  // 2. 3일 대화 기록창 (기본값 없음, 설정 시에만 등록)
+  if (finalShortcuts.chatHistory && finalShortcuts.chatHistory.trim()) {
+    try {
+      const ok = globalShortcut.register(finalShortcuts.chatHistory.trim(), () => {
+        if (historyWindow && historyWindow.isVisible()) {
+          historyWindow.hide();
+        } else {
+          openHistory();
+        }
+      });
+      if (!ok) {
+        console.warn('Failed to register chatHistory shortcut:', finalShortcuts.chatHistory);
+      }
+    } catch (e) {
+      console.warn('Error registering chatHistory shortcut:', finalShortcuts.chatHistory, e);
+    }
+  }
+
+  // 3. 환경 설정창 (기본값 없음, 설정 시에만 등록)
+  if (finalShortcuts.settings && finalShortcuts.settings.trim()) {
+    try {
+      const ok = globalShortcut.register(finalShortcuts.settings.trim(), () => {
+        if (settingsWindow && settingsWindow.isVisible()) {
+          settingsWindow.hide();
+        } else {
+          openSettings();
+        }
+      });
+      if (!ok) {
+        console.warn('Failed to register settings shortcut:', finalShortcuts.settings);
+      }
+    } catch (e) {
+      console.warn('Error registering settings shortcut:', finalShortcuts.settings, e);
+    }
+  }
+
+  updateTrayMenu();
+}
+
 // 화면 작업 영역 (Full-Screen Overlay Canvas)
 function calculateScreenBounds(displayId?: number | null) {
   const displays = screen.getAllDisplays();
@@ -297,6 +406,11 @@ function updateTrayMenu(status = currentTrayStatus) {
   currentTrayStatus = status;
   if (!tray) return;
 
+  const shortcuts = loadSavedShortcuts();
+  const chatLabel = shortcuts.chatInput ? `💬 말풍선 입력 (${shortcuts.chatInput})` : '💬 말풍선 입력';
+  const historyLabel = shortcuts.chatHistory ? `📜 최근 대화 기록 (${shortcuts.chatHistory})` : '📜 최근 대화 기록...';
+  const settingsLabel = shortcuts.settings ? `⚙️ 환경설정 (${shortcuts.settings})` : '⚙️ 환경설정...';
+
   const contextMenu = Menu.buildFromTemplate([
     {
       label: getTrayStatusLabel(currentTrayStatus),
@@ -304,11 +418,11 @@ function updateTrayMenu(status = currentTrayStatus) {
     },
     { type: 'separator' },
     {
-      label: '💬 말풍선 입력 (Ctrl+Alt+Cmd+P)',
+      label: chatLabel,
       click: () => openChatInput()
     },
     {
-      label: '📜 최근 대화 기록...',
+      label: historyLabel,
       click: () => openHistory()
     },
     {
@@ -316,7 +430,7 @@ function updateTrayMenu(status = currentTrayStatus) {
       click: () => openPreview()
     },
     {
-      label: '⚙️ 환경설정...',
+      label: settingsLabel,
       click: () => openSettings()
     },
     { type: 'separator' },
@@ -513,6 +627,10 @@ ipcMain.on('save-settings', (_event, newSettings) => {
       });
     }
   }
+  if (newSettings?.shortcuts) {
+    saveShortcutsToSettings(newSettings.shortcuts);
+    registerAppShortcuts(newSettings.shortcuts);
+  }
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('on-settings-updated', newSettings);
   }
@@ -543,10 +661,8 @@ app.whenReady().then(() => {
   createPreviewWindow();
   createTray();
 
-  const shortcutKey = process.platform === 'darwin' ? 'Control+Alt+Command+P' : 'Control+Alt+Shift+P';
-  globalShortcut.register(shortcutKey, () => {
-    openChatInput();
-  });
+  // 사용자 지정 또는 기본 전역 단축키 등록
+  registerAppShortcuts();
 
   // 프로덕션 환경에서 GitHub Releases 자동 업데이트 체크
   if (!process.env.VITE_DEV_SERVER_URL && !process.mas) {
