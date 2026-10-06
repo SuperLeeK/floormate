@@ -631,12 +631,98 @@ ipcMain.on('save-settings', (_event, newSettings) => {
     saveShortcutsToSettings(newSettings.shortcuts);
     registerAppShortcuts(newSettings.shortcuts);
   }
+  if (typeof newSettings?.autoUpdateEnabled === 'boolean') {
+    autoUpdater.autoDownload = newSettings.autoUpdateEnabled;
+  }
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('on-settings-updated', newSettings);
   }
   if (previewWindow && !previewWindow.isDestroyed()) {
     previewWindow.webContents.send('on-settings-updated', newSettings);
   }
+});
+
+function broadcastUpdateStatus(info: {
+  state: 'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error';
+  currentVersion?: string;
+  newVersion?: string;
+  progress?: number;
+  error?: string;
+}) {
+  const payload = {
+    currentVersion: app.getVersion(),
+    ...info
+  };
+  if (settingsWindow && !settingsWindow.isDestroyed()) {
+    settingsWindow.webContents.send('on-update-status', payload);
+  }
+}
+
+function setupAutoUpdater() {
+  autoUpdater.autoDownload = false; // 수동 확인 및 제어 지원을 위해 초기 자동 다운로드는 대기
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on('checking-for-update', () => {
+    broadcastUpdateStatus({ state: 'checking' });
+  });
+
+  autoUpdater.on('update-available', (info) => {
+    broadcastUpdateStatus({
+      state: 'available',
+      newVersion: info.version
+    });
+  });
+
+  autoUpdater.on('update-not-available', () => {
+    broadcastUpdateStatus({ state: 'not-available' });
+  });
+
+  autoUpdater.on('error', (err) => {
+    broadcastUpdateStatus({
+      state: 'error',
+      error: err ? err.message : '업데이트 확인 중 오류 발생'
+    });
+  });
+
+  autoUpdater.on('download-progress', (progressObj) => {
+    broadcastUpdateStatus({
+      state: 'downloading',
+      progress: Math.round(progressObj.percent)
+    });
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    broadcastUpdateStatus({
+      state: 'downloaded',
+      newVersion: info.version
+    });
+  });
+}
+
+ipcMain.handle('get-app-version', () => {
+  return app.getVersion();
+});
+
+ipcMain.handle('check-for-updates', async () => {
+  try {
+    broadcastUpdateStatus({ state: 'checking' });
+    const result = await autoUpdater.checkForUpdates();
+    return { ok: true, version: result?.updateInfo?.version };
+  } catch (err: any) {
+    broadcastUpdateStatus({ state: 'error', error: err?.message || '업데이트 확인 실패' });
+    return { ok: false, message: err?.message };
+  }
+});
+
+ipcMain.on('download-update', () => {
+  broadcastUpdateStatus({ state: 'downloading', progress: 0 });
+  autoUpdater.downloadUpdate().catch((err) => {
+    broadcastUpdateStatus({ state: 'error', error: err?.message });
+  });
+});
+
+ipcMain.on('quit-and-install', () => {
+  autoUpdater.quitAndInstall();
 });
 
 ipcMain.on('update-tray-status', (_event, status: string) => {
@@ -664,10 +750,18 @@ app.whenReady().then(() => {
   // 사용자 지정 또는 기본 전역 단축키 등록
   registerAppShortcuts();
 
-  // 프로덕션 환경에서 GitHub Releases 자동 업데이트 체크
+  // 자동 업데이트 리스너 등록
+  setupAutoUpdater();
+
+  // 프로덕션 환경에서 시작 시 1회 백그라운드 자동 업데이트 체크
   if (!process.env.VITE_DEV_SERVER_URL && !process.mas) {
-    autoUpdater.checkForUpdatesAndNotify().catch((err) => {
-      console.warn('Auto updater check failed:', err);
+    autoUpdater.checkForUpdates().then((result) => {
+      // 자동 다운로드 모드이면 바로 다운로드
+      if (result?.updateInfo) {
+        autoUpdater.downloadUpdate().catch(() => {});
+      }
+    }).catch((err) => {
+      console.warn('Auto updater initial check failed:', err);
     });
   }
 

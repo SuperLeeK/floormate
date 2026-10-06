@@ -8,6 +8,7 @@ import {
   BotConfig,
   BubbleTheme,
   ThrowItemType,
+  UpdateStatusInfo,
 } from "../types";
 import { PixelCharacter } from "./PixelCharacter";
 import {
@@ -26,6 +27,11 @@ import {
   Sidebar,
   Eye,
   Keyboard,
+  RefreshCw,
+  Download,
+  CheckCircle2,
+  AlertCircle,
+  Package,
 } from "lucide-react";
 import { CHARACTERS } from "../constants";
 import "./SettingsView.css";
@@ -69,6 +75,9 @@ function getSavedSettings(): AppSettings {
       if (!parsed.serverUrl || parsed.serverUrl.includes('localhost') || parsed.serverUrl.includes('trycloudflare.com')) {
         parsed.serverUrl = PERMANENT_SERVER_URL;
       }
+      if (parsed.autoUpdateEnabled === undefined) {
+        parsed.autoUpdateEnabled = true;
+      }
       return parsed;
     }
   } catch {
@@ -91,6 +100,7 @@ function getSavedSettings(): AppSettings {
     recentRooms: [{ code: "floor-main", name: "내 방" }],
     bubbleTheme: "default",
     throwItem: "bomb",
+    autoUpdateEnabled: true,
   };
 }
 
@@ -226,8 +236,83 @@ export const SettingsView: React.FC = () => {
   );
   const [savedFeedback, setSavedFeedback] = useState(false);
 
-  // DEV 전용
+  // DEV 전용 봇 목록
   const [bots, setBots] = useState<BotConfig[]>(settings.bots || []);
+
+  // 6. 자동 업데이트 설정 및 상태
+  const [autoUpdateEnabled, setAutoUpdateEnabled] = useState<boolean>(
+    settings.autoUpdateEnabled !== false
+  );
+  const [appVersion, setAppVersion] = useState<string>("1.0.1");
+  const [updateStatus, setUpdateStatus] = useState<UpdateStatusInfo>({
+    state: "idle",
+  });
+
+  useEffect(() => {
+    if (window.electronAPI?.getAppVersion) {
+      window.electronAPI.getAppVersion().then((ver) => {
+        if (ver) setAppVersion(ver);
+      });
+    }
+    if (window.electronAPI?.onUpdateStatus) {
+      const cleanup = window.electronAPI.onUpdateStatus((info) => {
+        setUpdateStatus(info);
+      });
+      return () => {
+        if (typeof cleanup === "function") cleanup();
+      };
+    }
+  }, []);
+
+  const handleCheckForUpdates = async () => {
+    if (!window.electronAPI?.checkForUpdates) return;
+    setUpdateStatus({ state: "checking" });
+    try {
+      await window.electronAPI.checkForUpdates();
+    } catch (err: any) {
+      setUpdateStatus({
+        state: "error",
+        error: err?.message || "업데이트 확인 중 오류가 발생했습니다.",
+      });
+    }
+  };
+
+  const handleDownloadUpdate = () => {
+    window.electronAPI?.downloadUpdate?.();
+  };
+
+  const handleQuitAndInstall = () => {
+    window.electronAPI?.quitAndInstall?.();
+  };
+
+  const handleToggleAutoUpdate = (enabled: boolean) => {
+    setAutoUpdateEnabled(enabled);
+    const updated: AppSettings = {
+      ...settings,
+      userName: userName.trim() || "친구",
+      userAvatar,
+      bubbleTheme,
+      throwItem,
+      roomId,
+      roomName,
+      recentRooms,
+      selectedDisplayId,
+      walkingArea,
+      nameTagPosition,
+      nameTagSpacing,
+      maxBubbleCount,
+      bubbleDurationSec,
+      bots,
+      serverUrl: PERMANENT_SERVER_URL,
+      shortcuts: {
+        chatInput: chatInputShortcut,
+        chatHistory: chatHistoryShortcut,
+        settings: settingsShortcut,
+      },
+      autoUpdateEnabled: enabled,
+    };
+    saveAndNotify(updated);
+  };
 
   // 디스플레이 목록 로드
   useEffect(() => {
@@ -336,6 +421,7 @@ export const SettingsView: React.FC = () => {
         chatHistory: chatHistoryShortcut,
         settings: settingsShortcut,
       },
+      autoUpdateEnabled,
     };
     saveAndNotify(updated);
   };
@@ -376,6 +462,7 @@ export const SettingsView: React.FC = () => {
         chatHistory: chatHistoryShortcut,
         settings: settingsShortcut,
       },
+      autoUpdateEnabled,
     };
     saveAndNotify(updated);
   };
@@ -427,6 +514,7 @@ export const SettingsView: React.FC = () => {
         chatHistory: chatHistoryShortcut,
         settings: settingsShortcut,
       },
+      autoUpdateEnabled,
     };
 
     saveAndNotify(updated);
@@ -1265,6 +1353,141 @@ export const SettingsView: React.FC = () => {
                       </div>
                     </div>
                   )}
+
+                  {/* 자동 업데이트 활성화 설정 */}
+                  <div className="setting-card">
+                    <div className="setting-card-row">
+                      <div className="setting-label-col">
+                        <label className="card-label">앱 자동 업데이트</label>
+                        <span className="card-sublabel">
+                          새로운 버전이 배포되면 백그라운드에서 자동으로 다운로드하여 최신 상태를 유지합니다.
+                        </span>
+                      </div>
+                      <label className="mac-switch">
+                        <input
+                          type="checkbox"
+                          checked={autoUpdateEnabled}
+                          onChange={(e) => handleToggleAutoUpdate(e.target.checked)}
+                        />
+                        <span className="mac-slider-switch" />
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* 앱 버전 정보 및 수동 업데이트 카드 */}
+                  <div className="setting-card update-info-card">
+                    <div className="update-card-header">
+                      <div className="setting-label-col">
+                        <div className="version-title-row">
+                          <Package size={14} className="version-icon" />
+                          <label className="card-label">버전 정보 및 업데이트 확인</label>
+                          <span className="version-badge">v{appVersion}</span>
+                        </div>
+                        <span className="card-sublabel">
+                          현재 설치된 버전 정보이며, 최신 버전 확인 및 수동 업데이트를 진행할 수 있습니다.
+                        </span>
+                      </div>
+                      {updateStatus.state !== "checking" && updateStatus.state !== "downloading" && (
+                        <button
+                          type="button"
+                          className="mac-action-btn small"
+                          onClick={handleCheckForUpdates}
+                        >
+                          <RefreshCw size={12} /> 업데이트 확인
+                        </button>
+                      )}
+                    </div>
+
+                    {/* 업데이트 상태 피드백 영역 */}
+                    <div className="update-status-panel">
+                      {updateStatus.state === "idle" && (
+                        <div className="update-status-msg idle">
+                          최신 버전 유무를 확인하려면 [업데이트 확인] 버튼을 누르세요.
+                        </div>
+                      )}
+
+                      {updateStatus.state === "checking" && (
+                        <div className="update-status-msg checking">
+                          <RefreshCw size={13} className="spin-icon" />
+                          <span>최신 버전을 확인하고 있습니다...</span>
+                        </div>
+                      )}
+
+                      {updateStatus.state === "not-available" && (
+                        <div className="update-status-msg not-available">
+                          <CheckCircle2 size={14} className="text-green" />
+                          <span>현재 최신 버전(v{appVersion})을 사용 중입니다.</span>
+                        </div>
+                      )}
+
+                      {updateStatus.state === "available" && (
+                        <div className="update-status-msg available">
+                          <div className="available-msg-left">
+                            <Sparkles size={14} className="text-amber" />
+                            <span>
+                              새로운 버전(<strong>v{updateStatus.newVersion}</strong>)이 출시되었습니다!
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            className="mac-action-btn small primary"
+                            onClick={handleDownloadUpdate}
+                          >
+                            <Download size={12} /> 지금 다운로드
+                          </button>
+                        </div>
+                      )}
+
+                      {updateStatus.state === "downloading" && (
+                        <div className="update-downloading-box">
+                          <div className="downloading-header">
+                            <span className="downloading-text">
+                              새 버전을 다운로드하고 있습니다...
+                            </span>
+                            <span className="downloading-percent">
+                              {Math.round(updateStatus.progress || 0)}%
+                            </span>
+                          </div>
+                          <div className="update-progress-bar">
+                            <div
+                              className="update-progress-fill"
+                              style={{ width: `${Math.min(100, Math.max(0, updateStatus.progress || 0))}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {updateStatus.state === "downloaded" && (
+                        <div className="update-status-msg downloaded">
+                          <div className="downloaded-msg-left">
+                            <CheckCircle2 size={14} className="text-green" />
+                            <span>
+                              새 버전 다운로드가 완료되었습니다. 앱을 재시작하여 바로 설치할 수 있습니다.
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            className="mac-action-btn small primary install-btn"
+                            onClick={handleQuitAndInstall}
+                          >
+                            <RefreshCw size={12} /> 재시작하여 지금 설치
+                          </button>
+                        </div>
+                      )}
+
+                      {updateStatus.state === "error" && (
+                        <div className="update-status-msg error">
+                          <AlertCircle size={14} className="text-rose" />
+                          <div className="error-text-col">
+                            <span>업데이트 확인 또는 다운로드 중 문제가 발생했습니다.</span>
+                            {updateStatus.error && (
+                              <span className="error-detail">{updateStatus.error}</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

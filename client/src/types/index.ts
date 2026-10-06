@@ -107,6 +107,15 @@ export interface AppSettings {
   bubbleTheme?: BubbleTheme; // 기본 말풍선, 네온 다크, 레트로 픽셀, 사이버 핑크
   throwItem?: ThrowItemType; // 기본 폭탄 💣, 돌멩이 🪨, 하트 💖, 번개 ⚡ 등
   shortcuts?: AppShortcuts; // 사용자 정의 전역 단축키
+  autoUpdateEnabled?: boolean; // 새 버전 자동 다운로드 및 업데이트 활성화 여부 (기본: true)
+}
+
+export interface UpdateStatusInfo {
+  state: 'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error';
+  currentVersion?: string;
+  newVersion?: string;
+  progress?: number;
+  error?: string;
 }
 
 declare global {
@@ -135,6 +144,11 @@ declare global {
       setDisplayId?: (displayId: number) => void;
       previewWalkingArea?: (area: { minPercent: number; maxPercent: number } | null) => void;
       onPreviewWalkingArea?: (callback: (area: { minPercent: number; maxPercent: number } | null) => void) => (() => void) | void;
+      getAppVersion?: () => Promise<string>;
+      checkForUpdates?: () => Promise<{ ok: boolean; message?: string }>;
+      downloadUpdate?: () => void;
+      quitAndInstall?: () => void;
+      onUpdateStatus?: (callback: (info: UpdateStatusInfo) => void) => (() => void) | void;
     };
   }
 }
