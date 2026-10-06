@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain, screen, Tray, Menu, nativeImage, globalShortcut } from 'electron';
+import { autoUpdater } from 'electron-updater';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -546,6 +547,13 @@ app.whenReady().then(() => {
   globalShortcut.register(shortcutKey, () => {
     openChatInput();
   });
+
+  // 프로덕션 환경에서 GitHub Releases 자동 업데이트 체크
+  if (!process.env.VITE_DEV_SERVER_URL && !process.mas) {
+    autoUpdater.checkForUpdatesAndNotify().catch((err) => {
+      console.warn('Auto updater check failed:', err);
+    });
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

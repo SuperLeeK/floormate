@@ -18,7 +18,7 @@ import { CHARACTER_THEMES } from './constants';
 import './App.css';
 
 const DEFAULT_SETTINGS: AppSettings = {
-  serverUrl: import.meta.env.VITE_SERVER_URL || 'http://localhost:3001',
+  serverUrl: import.meta.env.VITE_SERVER_URL || 'https://floormate.hoeng.site',
   roomId: '',
   roomName: '메인 로비',
   userId: `user_${Math.random().toString(36).substring(2, 9)}`,
@@ -82,6 +82,9 @@ function getSavedSettings(): AppSettings {
           ...b,
           avatar: (!b.avatar || !CHARACTER_THEMES[b.avatar as CharacterType]) ? 'cat' : b.avatar,
         }));
+      }
+      if (!parsed.serverUrl || parsed.serverUrl.includes('localhost') || parsed.serverUrl.includes('trycloudflare.com')) {
+        parsed.serverUrl = 'https://floormate.hoeng.site';
       }
       if (import.meta.env.VITE_SERVER_URL) {
         parsed.serverUrl = import.meta.env.VITE_SERVER_URL;

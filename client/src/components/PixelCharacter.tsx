@@ -38,14 +38,14 @@ export const PixelCharacter: React.FC<PixelCharacterProps> = ({
   const activeLimbColor = limbColor || theme.limbColor;
   const activeOutlineColor = outlineColor || theme.outlineColor || '#333333';
 
-  // 현재 이미지 경로 계산
+  // 현재 이미지 경로 계산 (Electron file:// 프로토콜 대응 상대 경로 적용)
   const imageSrc = useMemo(() => {
     if (retryStep >= 2) {
       // 2단계 이상 실패 시 가장 안정적인 기본 고양이 정면으로 fallback
-      return '/characters/cat/front.png';
+      return './characters/cat/front.png';
     }
     const ext = retryStep === 0 ? 'png' : 'webp';
-    const base = `/characters/${safeType}`;
+    const base = `./characters/${safeType}`;
 
     if (isPoked) return `${base}/poked.${ext}`;
     if (isWalking) {

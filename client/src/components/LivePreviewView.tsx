@@ -10,7 +10,7 @@ interface PreviewBubble {
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
-  serverUrl: 'http://localhost:3000',
+  serverUrl: 'https://floormate.hoeng.site',
   roomId: 'general',
   roomName: '우리들의 아지트',
   userId: 'user_' + Math.random().toString(36).substring(2, 9),

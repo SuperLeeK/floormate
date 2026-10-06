@@ -811,10 +811,10 @@ export const SettingsView: React.FC = () => {
                     <input
                       type="text"
                       className="mac-text-input code-input full-width"
-                      placeholder="방 코드 23자리"
+                      placeholder="방 코드 입력"
                       value={joinCodeInput}
                       onChange={(e) => setJoinCodeInput(e.target.value)}
-                      maxLength={12}
+                      maxLength={40}
                     />
                   </div>
                 </div>

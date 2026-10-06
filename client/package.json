@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "canvas-confetti": "^1.9.4",
+    "electron-updater": "^6.8.9",
     "lucide-react": "^1.16.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -36,6 +37,13 @@
     "directories": {
       "output": "release"
     },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "SuperLeeK",
+        "repo": "floormate"
+      }
+    ],
     "files": [
       "dist/**/*",
       "dist-electron/**/*"
